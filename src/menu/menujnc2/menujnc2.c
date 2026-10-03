@@ -2,17 +2,20 @@
 #include "menu.h"
 #include "gamestate.h"
 #include "battle.h"
-#include "btl_color.h"
-#include "btl_entity.h"
+#include "ui/icon.h"
+#include "snd_sfx.h"
+#include "ui/font.h"
+#include "ui/dialog.h"
+#include "ui/text.h"
 #include "game.h"
 #include "numstr.h"
-#include "color.h"
+#include "battle_results/number.h"
 #include "gf.h"
 #include "ability_list.h"
 
 #include "menujnc2.h"
-#include "btl_sfx.h"
 #include "card.h"
+#include "psxsdk/libetc.h"
 
 /*
  * Foreign symbols owned by other units (menumain/gamestate/battle/...). Kept
@@ -92,7 +95,7 @@ next_string:
         goto end;
     }
     decodeMessage(src, buf, -1);
-    src = func_8002F548(src);
+    src = nextMessageLine(src);
     pos = buf;
 
     for (;;) {
@@ -780,17 +783,13 @@ s32 getAbilityScrollOffset(s32 index) {
     return -(page * 160);
 }
 
-/** @brief Draw inner panel with section id 0xB and clear flag. */
-s32 renderInnerPanel(s32 pos) {
+/** @brief Look up string @p pos in menu text category 0xB. */
+u8 *renderInnerPanel(s32 pos) {
     return func_801F08D4(1, 0xB, pos, 0);
 }
 
-/**
- * @brief Draw inner panel with section id 0xB and set flag.
- * @param pos Panel position parameter
- * @return Result of func_801F08D4
- */
-s32 renderInnerPanelAlt(s32 pos) {
+/** @brief Look up string @p pos in menu text category 0xB, with the last flag set. */
+u8 *renderInnerPanelAlt(s32 pos) {
     return func_801F08D4(1, 0xB, pos, 1);
 }
 
@@ -1559,35 +1558,36 @@ void previewJunctionChange(s32 charIdx, s32 gfIdx, s32 slot, s32 abilityId) {
 }
 
 /**
- * @brief Look up ability/command name string by type and index.
+ * @brief Look up the description of a junction command or ability by type and index.
  *
- * For type 1 (commands): looks up command ID from D_801EEF10, finds
- * the GF ability index in g_gfData, and returns the name via getAbilityEntryDesc.
+ * For type 1 (commands): looks up the command ability ID from D_801EEF10,
+ * reads its battle command from g_kernel, and returns that command's
+ * description via getBattleCommandDesc.
  * For type 2 (abilities): looks up ability ID from D_801EEF40 and
- * returns the name via getAbilityDesc.
+ * returns its description via getAbilityDesc.
  *
  * @param type Lookup type (0=none, 1=command, 2=ability).
  * @param index Index into the lookup table.
- * @return Name string pointer, or 0 if not found.
+ * @return Description string, or NULL if not found.
  */
-s32 getAbilityNamePtr(s32 type, s32 index) {
-    s32 result;
+u8 *getAbilityNamePtr(s32 type, s32 index) {
+    u8 *result;
     u8 *gfData;
     s32 stride;
 
     switch (type) {
     case 0:
-        result = 0;
+        result = NULL;
         break;
     case 1:
         if (index < D_801EEF38) {
             u8 cmdId = D_801EEF10[index * 2];
-            gfData = (u8 *)&D_80078E00;
+            gfData = (u8 *)&g_kernel;
             stride = 8;
-            /* g_gfData ability range J: typeField at offset 0x4180 + 5 = 0x4185 */
-            result = getAbilityEntryDesc(gfData[(cmdId - 0x14) * stride + 0x4185]);
+            /* g_kernel ability range J: typeField at offset 0x4180 + 5 = 0x4185 */
+            result = getBattleCommandDesc(gfData[(cmdId - 0x14) * stride + 0x4185]);
         } else {
-            result = 0;
+            result = NULL;
         }
         break;
     case 2:
@@ -1595,10 +1595,10 @@ s32 getAbilityNamePtr(s32 type, s32 index) {
             u8 ablId = D_801EEF40[index * 2];
             result = getAbilityDesc(ablId);
         } else {
-            result = 0;
+            result = NULL;
         }
         break;
-        result = 0;
+        result = NULL;
     default:
         break;
     }
@@ -1695,8 +1695,8 @@ void buildMagicLookupTable(s32 charIdx) {
  * @param ctx Junction menu context (JunctionMenuCtx *).
  */
 void junctionMenuUpdate(JunctionMenuCtx *ctx) {
-    u16 inputNew = g_menuDisplayCfg.inputNew;
     u16 inputRepeat = g_menuDisplayCfg.inputRepeat;
+    u16 inputNew = g_menuDisplayCfg.inputNew;
     u16 *statePtr;
     u16 state;
     s32 var_a2;
@@ -1740,7 +1740,7 @@ dispatch:
                 ctx->unk4E = 0;
             }
             if (popcount(ctx->parentParam) >= 2) {
-                if (inputNew & 4) {
+                if (inputRepeat & PADL1) {
                     if ((ctx->unk61 == 0) ||
                         (g_junctionChars[ctx->charIdx].currentHp <= g_gameState.chars[ctx->charIdx].currentHp)) {
                         restoreCommandAbilityBackup(ctx->charIdx, 1);
@@ -1756,7 +1756,7 @@ dispatch:
                     *statePtr = 0x2B;
                     break;
                 }
-                if (inputNew & 8) {
+                if (inputRepeat & PADR1) {
                     if ((ctx->unk61 == 0) ||
                         (g_junctionChars[ctx->charIdx].currentHp <= g_gameState.chars[ctx->charIdx].currentHp)) {
                         restoreCommandAbilityBackup(ctx->charIdx, 1);
@@ -1774,7 +1774,7 @@ dispatch:
                 }
             }
             renderStatValueBar(ctx, 1, ctx->unk4E);
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 sendSpuCommand(2);
                 switch (ctx->unk4E) {
                 case 0:
@@ -1795,7 +1795,7 @@ dispatch:
                 break;
             }
         block35_fall:
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 if ((ctx->unk61 != 0) &&
                     (g_junctionChars[ctx->charIdx].currentHp > g_gameState.chars[ctx->charIdx].currentHp)) {
                     ctx->returnState = 3;
@@ -1810,11 +1810,11 @@ dispatch:
                     applyJunctedGfs(ctx->charIdx);
                     snapshotJunctionPreview(ctx->charIdx);
                     *statePtr = 0x48;
-                    ctx->unk4E = func_801F76E0(inputNew, ctx->unk5A, ctx->unk4E);
+                    ctx->unk4E = func_801F76E0(inputRepeat, ctx->unk5A, ctx->unk4E);
                     ctx->itemPtr = renderInnerPanelAlt(D_801EEB1C[ctx->unk4E]);
                 }
             } else {
-                ctx->unk4E = func_801F76E0(inputNew, ctx->unk5A, ctx->unk4E);
+                ctx->unk4E = func_801F76E0(inputRepeat, ctx->unk5A, ctx->unk4E);
                 ctx->itemPtr = renderInnerPanelAlt(D_801EEB1C[ctx->unk4E]);
             }
             break;
@@ -1843,10 +1843,10 @@ dispatch:
                 ctx->slideOffset = 0;
                 *statePtr = 3;
             }
-            if (inputRepeat & 4) {
+            if (inputNew & PADL1) {
                 *statePtr = 4;
             }
-            if (inputRepeat & 8) {
+            if (inputNew & PADR1) {
                 *statePtr = 6;
             }
             break;
@@ -1875,10 +1875,10 @@ dispatch:
                 ctx->slideOffset = 0;
                 *statePtr = 3;
             }
-            if (inputRepeat & 4) {
+            if (inputNew & PADL1) {
                 *statePtr = 4;
             }
-            if (inputRepeat & 8) {
+            if (inputNew & PADR1) {
                 *statePtr = 6;
             }
             break;
@@ -1933,12 +1933,12 @@ dispatch:
             renderStatValueBar(ctx, 0, ctx->unk4E);
             renderStatDeltaEntry(ctx, 1, ctx->unk4C);
             ctx->itemPtr = renderInnerPanelAlt(D_801EEB38[ctx->unk4C]);
-            ctx->unk4C = func_801F6800(inputNew, 3, ctx->unk4C);
-            if (inputRepeat & 0x10) {
+            ctx->unk4C = func_801F6800(inputRepeat, 3, ctx->unk4C);
+            if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 *statePtr = 8;
             }
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 playSoundEffect(0x11);
                 autoJunctionAll(ctx->charIdx, ctx->unk4C);
                 previewJunctionChange(ctx->charIdx, -1, -1, -1);
@@ -1954,7 +1954,7 @@ dispatch:
             ctx->unk40 = 0;
             /* fallthrough */
         case 0xD:
-            ctx->unk4B = func_80035AA4(ctx->statInfo[1], 0);
+            ctx->unk4B = findNthSetBit(ctx->statInfo[1], 0);
             *statePtr = 0xE;
             break;
         case 0xE:
@@ -1969,14 +1969,14 @@ dispatch:
             renderStatValueBar(ctx, 0, ctx->unk4E);
             renderStatDeltaEntry(ctx, 1, ctx->unk4B);
             if (ctx->statInfo[1] == 3) {
-                ctx->unk4B = func_801F6800(inputNew, 2, ctx->unk4B);
+                ctx->unk4B = func_801F6800(inputRepeat, 2, ctx->unk4B);
             }
             ctx->itemPtr = renderInnerPanelAlt(D_801EEB30[ctx->unk4B]);
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 *statePtr = 8;
             }
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 sendSpuCommand(2);
                 if (ctx->unk4B != 0) {
                     *statePtr = 0x10;
@@ -2000,9 +2000,9 @@ dispatch:
             *statePtr = 0x12;
             break;
         case 0x12:
-            ctx->unk5C = func_801F6768(inputNew, 2, ctx->unk5C);
+            ctx->unk5C = func_801F6768(inputRepeat, 2, ctx->unk5C);
             func_801F6F88(ctx->unk5C);
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 ctx->unk42 = 0;
                 ctx->unk61 = 1;
                 switch (ctx->unk5C) {
@@ -2017,7 +2017,7 @@ dispatch:
                     *statePtr = 0xE;
                     break;
                 default:
-                    if (inputRepeat & 0x10) {
+                    if (inputNew & PADRup) {
                         sendSpuCommand(3);
                         ctx->unk5C = -1;
                         ctx->unk42 = 0;
@@ -2026,7 +2026,7 @@ dispatch:
                     break;
                 }
             } else {
-                if (inputRepeat & 0x10) {
+                if (inputNew & PADRup) {
                     sendSpuCommand(3);
                     ctx->unk5C = -1;
                     ctx->unk42 = 0;
@@ -2113,7 +2113,7 @@ dispatch:
             s32 col;
             s32 fr;
             renderStatValueBar(ctx, 0, ctx->unk4E);
-            fr = func_801F6768(inputNew, ctx->unk5F, ctx->unk5E);
+            fr = func_801F6768(inputRepeat, ctx->unk5F, ctx->unk5E);
             ctx->unk5E = fr;
             renderStatColumnEntry(1, ctx->unk5E, 0);
             if (fr < 3) {
@@ -2125,23 +2125,23 @@ dispatch:
             }
             if (col != 0) {
                 if (fr < 3) {
-                    { s32 b = (s32)&D_80078E00; u8 *p = (u8 *)((col - 0x14) * 8 + b); ctx->itemPtr = getAbilityEntryDesc(p[0x4185]); }
+                    { s32 b = (s32)&g_kernel; u8 *p = (u8 *)((col - 0x14) * 8 + b); ctx->itemPtr = getBattleCommandDesc(p[0x4185]); }
                 } else {
                     ctx->itemPtr = getAbilityDesc(col);
                 }
             } else {
-                ctx->itemPtr = 0;
+                ctx->itemPtr = NULL;
             }
             ctx->unk44 = ctx->statByte[ctx->unk56] / 11;
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 *statePtr = 0x19;
             }
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 sendSpuCommand(2);
                 *statePtr = 0x1B;
             }
-            if (inputRepeat & 0x80) {
+            if (inputNew & PADRleft) {
                 s32 e5 = ctx->unk5E;
                 if (e5 >= 3) {
                     if (g_gameState.chars[ctx->charIdx].commands[e5 + 1] != 0) {
@@ -2175,15 +2175,15 @@ dispatch:
             {
                 s32 d = ctx->statByte[ctx->unk56] / 11;
                 s32 m = ctx->statByte[ctx->unk56] % 11;
-                ctx->statByte[ctx->unk56] = d * 0xB + func_801F6768(inputNew, 0xB, m);
+                ctx->statByte[ctx->unk56] = d * 0xB + func_801F6768(inputRepeat, 0xB, m);
             }
             ctx->itemPtr = getAbilityNamePtr(ctx->unk56, ctx->statByte[ctx->unk56]);
             if (ctx->unk57 >= 0xC) {
-                if (inputNew & 0x8000) {
+                if (inputRepeat & PADLleft) {
                     state = 0x1D;
                     goto dispatch;
                 }
-                if (inputNew & 0x2000) {
+                if (inputRepeat & PADLright) {
                     state = 0x1F;
                     goto dispatch;
                 }
@@ -2191,10 +2191,10 @@ dispatch:
             renderStatValueBar(ctx, 0, ctx->unk4E);
             renderStatColumnEntry(0, ctx->unk5E, 0);
             renderStatListEntry(1, ctx->statByte[ctx->unk56]);
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 if (ctx->statByte[ctx->unk56] >= (s32)ctx->unk57) {
                     sendSpuCommand(5);
-                    if (inputRepeat & 0x10) {
+                    if (inputNew & PADRup) {
                         sendSpuCommand(3);
                         *statePtr = 0x18;
                     }
@@ -2202,7 +2202,7 @@ dispatch:
                     state = 0x21;
                     goto dispatch;
                 }
-            } else if (inputRepeat & 0x10) {
+            } else if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 *statePtr = 0x18;
             }
@@ -2239,10 +2239,10 @@ dispatch:
                 ctx->unk34 = 0;
                 *statePtr = 0x1C;
             }
-            if (inputRepeat & 0x2000) {
+            if (inputNew & PADLright) {
                 *statePtr = 0x1F;
             }
-            if (inputRepeat & 0x8000) {
+            if (inputNew & PADLleft) {
                 *statePtr = 0x1D;
             }
             break;
@@ -2277,10 +2277,10 @@ dispatch:
                 ctx->unk34 = 0;
                 *statePtr = 0x1C;
             }
-            if (inputRepeat & 0x2000) {
+            if (inputNew & PADLright) {
                 *statePtr = 0x1F;
             }
-            if (inputRepeat & 0x8000) {
+            if (inputNew & PADLleft) {
                 *statePtr = 0x1D;
             }
             break;
@@ -2354,10 +2354,10 @@ dispatch:
             renderStatValueBar(ctx, 0, ctx->unk4E);
             renderStatDeltaEntry(ctx, 1, ctx->unk4A);
             if (g_junctionChars[ctx->charIdx].availFlags != 0) {
-                ctx->unk4A = func_801F6800(inputNew, 2, ctx->unk4A);
+                ctx->unk4A = func_801F6800(inputRepeat, 2, ctx->unk4A);
             }
             ctx->itemPtr = renderInnerPanelAlt(D_801EEB28[ctx->unk4A]);
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 ctx->unk5A = getJunctionCapabilities(ctx->charIdx);
                 if (ctx->unk62 != 0) {
@@ -2383,7 +2383,7 @@ dispatch:
                     *statePtr = 8;
                 }
             }
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 sendSpuCommand(2);
                 if (ctx->unk4A != 0) {
                     *statePtr = 0x31;
@@ -2423,7 +2423,7 @@ dispatch:
             }
             //tmp = (s8)(slot - (col >> 2) * 4);
             tmp = (s8) (slot - (((unsigned long long) (col >> 2)) * 4)); // Fixme
-            ctx->statSlot = (col >> 2) * 4 + func_801F6768(inputNew, 4, tmp);
+            ctx->statSlot = (col >> 2) * 4 + func_801F6768(inputRepeat, 4, tmp);
             ctx->unk58 = 0xA;
             ctx->unk38 = getAbilityScrollOffset(0xA);
             {
@@ -2436,11 +2436,11 @@ dispatch:
                 previewJunctionChange(ctx->charIdx, arg1, -1, -1);
             }
             if (ctx->discCount >= 5) {
-                if (inputNew & 0x8000) {
+                if (inputRepeat & PADLleft) {
                     state = 0x2D;
                     goto dispatch;
                 }
-                if (inputNew & 0x2000) {
+                if (inputRepeat & PADLright) {
                     state = 0x2F;
                     goto dispatch;
                 }
@@ -2448,19 +2448,19 @@ dispatch:
             renderStatValueBar(ctx, 0, ctx->unk4E);
             renderStatDeltaEntry(ctx, 0, ctx->unk4A);
             renderStatEffectBar(1, ctx);
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 if (ctx->statSlot < (s32)ctx->discCount) {
                     state = 0x42;
                     goto dispatch;
                 }
                 sendSpuCommand(5);
             }
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 previewJunctionChange(ctx->charIdx, -1, -1, -1);
                 saveCommandAbilityBackup(ctx->charIdx, 1);
                 *statePtr = 0x2A;
-            } else if (inputRepeat & 0x80) {
+            } else if (inputNew & PADRleft) {
                 if (ctx->statSlot < (s32)ctx->discCount) {
                     sendSpuCommand(2);
                     *statePtr = 0x45;
@@ -2489,9 +2489,9 @@ dispatch:
             *statePtr = 0x2C;
             break;
         case 0x2C:
-            ctx->unk5C = func_801F6768(inputNew, 2, ctx->unk5C);
+            ctx->unk5C = func_801F6768(inputRepeat, 2, ctx->unk5C);
             func_801F6F88(ctx->unk5C);
-            if (inputRepeat & 0x40) {
+            if (inputNew & PADRdown) {
                 sendSpuCommand(2);
                 syncCharacterHp(ctx->charIdx);
                 ctx->statSlot = -1;
@@ -2560,10 +2560,10 @@ dispatch:
                 ctx->unk34 = 0;
                 *statePtr = 0x29;
             }
-            if (inputRepeat & 0x8000) {
+            if (inputNew & PADLleft) {
                 *statePtr = 0x2D;
             }
-            if (inputRepeat & 0x2000) {
+            if (inputNew & PADLright) {
                 *statePtr = 0x2F;
             }
             break;
@@ -2614,10 +2614,10 @@ dispatch:
                 ctx->unk34 = 0;
                 *statePtr = 0x29;
             }
-            if (inputRepeat & 0x8000) {
+            if (inputNew & PADLleft) {
                 *statePtr = 0x2D;
             }
-            if (inputRepeat & 0x2000) {
+            if (inputNew & PADLright) {
                 *statePtr = 0x2F;
             }
             break;
@@ -2654,7 +2654,7 @@ dispatch:
             }
             col = ctx->unk58 % 5;
             grp = ctx->unk58 / 5;
-            if (inputNew & 0x4000) {
+            if (inputRepeat & PADLdown) {
                 ctx->statScale = 0x1000;
                 sendSpuCommand(1);
                 col += 1;
@@ -2662,7 +2662,7 @@ dispatch:
                     col = (grp == 3);
                 }
             }
-            if (inputNew & 0x1000) {
+            if (inputRepeat & PADLup) {
                 ctx->statScale = 0x1000;
                 sendSpuCommand(1);
                 col -= 1;
@@ -2679,26 +2679,26 @@ dispatch:
             renderStatDeltaEntry(ctx, 0, ctx->unk4A);
             renderAbilityEntry(1, ctx->unk58);
             previewJunctionChange(ctx->charIdx, -1, -1, -1);
-            if (inputNew & 0x8000) {
+            if (inputRepeat & PADLleft) {
                 if (grp != 0) {
                     ctx->statScale = 0x1000;
                     state = 0x35;
                     goto dispatch;
                 }
             }
-            if ((inputNew & 0x2000) && (grp < 3)) {
+            if ((inputRepeat & PADLright) && (grp < 3)) {
                 ctx->statScale = 0x1000;
                 state = 0x37;
                 goto dispatch;
             }
             ctx->dataPtr2 = buildMagicAvailMask(ctx->charIdx, ctx->unk58);
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 ctx->statScale = 0x1000;
                 sendSpuCommand(3);
                 previewJunctionChange(ctx->charIdx, -1, -1, -1);
                 *statePtr = 0x39;
             } else {
-                if (inputRepeat & 0x40) {
+                if (inputNew & PADRdown) {
                     ctx->statScale = 0x1000;
                     if (getJunctionSlotFlags(ctx->charIdx, ctx->unk58) != 0) {
                         sendSpuCommand(2);
@@ -2707,7 +2707,7 @@ dispatch:
                         sendSpuCommand(5);
                     }
                 }
-                if (inputRepeat & 0x80) {
+                if (inputNew & PADRleft) {
                     ctx->statScale = 0x1000;
                     if (getJunctionSlotFlags(ctx->charIdx, ctx->unk58) != 0) {
                         s32 idx = D_801EEAC0[ctx->unk58];
@@ -2844,12 +2844,12 @@ dispatch:
                 col += 3;
             }
             tmp = (s8) (slot - (((unsigned long long) (col >> 2)) * 4));
-            ctx->unk50 = (col >> 2) * 4 + func_801F6768(inputNew, 4, tmp) ;
-            if (inputNew & 0x8000) {
+            ctx->unk50 = (col >> 2) * 4 + func_801F6768(inputRepeat, 4, tmp) ;
+            if (inputRepeat & PADLleft) {
                 state = 0x3C;
                 goto dispatch;
             }
-            if (!(inputNew & 0x2000)) {
+            if (!(inputRepeat & PADLright)) {
                 renderStatValueBar(ctx, 0, ctx->unk4E);
                 renderStatDeltaEntry(ctx, 0, ctx->unk4A);
                 renderAbilityEntry(0, ctx->unk58);
@@ -2862,7 +2862,7 @@ dispatch:
                   } else {
                     previewJunctionChange(ctx->charIdx, -1, cc, grp);
                   } }
-                if (inputRepeat & 0x40) {
+                if (inputNew & PADRdown) {
                     s32 mm2 = 1 << ctx->unk50;
                     if (ctx->dataPtr2 & mm2) {
                         playSoundEffect(0x11);
@@ -2871,7 +2871,7 @@ dispatch:
                     }
                     sendSpuCommand(5);
                 }
-                if (inputRepeat & 0x10) {
+                if (inputNew & PADRup) {
                     sendSpuCommand(3);
                     previewJunctionChange(ctx->charIdx, -1, -1, -1);
                     *statePtr = 0x34;
@@ -2926,10 +2926,10 @@ dispatch:
                 ctx->unk34 = 0;
                 *statePtr = 0x3B;
             }
-            if (inputRepeat & 0x8000) {
+            if (inputNew & PADLleft) {
                 *statePtr = 0x3C;
             }
-            if (inputRepeat & 0x2000) {
+            if (inputNew & PADLright) {
                 *statePtr = 0x3E;
             }
             break;
@@ -2976,10 +2976,10 @@ dispatch:
                 ctx->unk34 = 0;
                 *statePtr = 0x3B;
             }
-            if (inputRepeat & 0x8000) {
+            if (inputNew & PADLleft) {
                 *statePtr = 0x3C;
             }
-            if (inputRepeat & 0x2000) {
+            if (inputNew & PADLright) {
                 *statePtr = 0x3E;
             }
             break;
@@ -3031,21 +3031,21 @@ dispatch:
         case 0x43:
             sendSpuCommand(5);
             ctx->unk66 = 0x258;
-            func_8002D6AC(0, D_801EF1B0);
+            setDialogMessage(0, D_801EF1B0);
             func_801F23D0(0, 0x68, D_801EF1B0);
-            func_8002DE74(0, 0x56);
-            func_8002CA58(0, 0);
-            func_8002DCF4(0);
+            setDialogCornerIcon(0, 0x56);
+            setDialogTextSpeed(0, 0);
+            openDialogInstant(0);
             *statePtr = 0x44;
             break;
         case 0x44:
             ctx->unk66 -= 1;
-            if (inputRepeat & 0x50) {
-                func_801F7BEC(inputRepeat);
+            if (inputNew & (PADRup | PADRdown)) {
+                func_801F7BEC(inputNew);
                 ctx->unk66 = 0;
             }
             if ((s16)ctx->unk66 <= 0) {
-                func_8002DD58(0);
+                closeDialogInstant(0);
                 *statePtr = 0x29;
             }
             break;
@@ -3061,11 +3061,11 @@ dispatch:
             renderStatValueBar(ctx, 0, ctx->unk4E);
             renderStatDeltaEntry(ctx, 0, ctx->unk4A);
             renderStatEffectBar(1, ctx);
-            if (inputRepeat & 0x10) {
+            if (inputNew & PADRup) {
                 sendSpuCommand(3);
                 *statePtr = 0x47;
             }
-            if (inputRepeat & 0xC0) {
+            if (inputNew & (PADRdown | PADRleft)) {
                 sendSpuCommand(2);
                 *statePtr = 0x47;
             }
@@ -3090,7 +3090,7 @@ dispatch:
                 func_801F18FC(ctx);
                 func_801F0BB0();
                 func_801F5340();
-                func_80023888();
+                recalcPartyStats();
                 *statePtr = 8;
             }
             if (func_801F1200() == 0) {
@@ -3206,21 +3206,21 @@ s32 renderStatTableA(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
             color = 3;
         }
 
-        cy2 = func_8002FF34(renderCtx, cursorY, entry->labelId, x, y, g_menuColor);
+        cy2 = drawIcon(renderCtx, cursorY, entry->labelId, x, y, g_menuTint[MENU_TINT_NORMAL]);
         x += 0x39;
         y += 4;
         if (indicator != 7) {
-            cy2 = func_800300F8(renderCtx, cy2, indicator, x, y, g_menuColor, (color * 64) + 2);
+            cy2 = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cy2, indicator, x, y, g_menuTint[MENU_TINT_NORMAL], (color * 64) + 2);
         }
         x += 0xA;
-        func_8002F294(currentVal, buf, func_80020F84(0xB)[1]);
-        fmtParam = func_80020F84(0xB)[1];
-        func_8002F2EC(&buf[2], 2, fmtParam, func_80020F84(0xB)[0]);
-        func_8002A2C4(buf, fmtResult);
+        intToDecStringShort(currentVal, buf, getMenuString(0xB)[1]);
+        fmtParam = getMenuString(0xB)[1];
+        replaceLeadingZeros(&buf[2], 2, fmtParam, getMenuString(0xB)[0]);
+        btlStrcat2(buf, fmtResult);
         cursorY = func_8002C56C(renderCtx, cy2, x, y, &buf[2], color);
     }
 
-    if (func_80037ADC() == 4) {
+    if (isMcBusy() == 4) {
         cfg->iconType = 0xFC;
     } else {
         cfg->iconType = 0xD0;
@@ -3230,7 +3230,7 @@ s32 renderStatTableA(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x59;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3289,21 +3289,21 @@ s32 renderStatTableB(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
             indicator = 0x6D;
             color = 3;
         }
-        cy2 = func_8002FF34(renderCtx, cursorY, entry->labelId, x, y, g_menuColor);
+        cy2 = drawIcon(renderCtx, cursorY, entry->labelId, x, y, g_menuTint[MENU_TINT_NORMAL]);
         x += 0x39;
         y += 4;
         if (indicator != 7) {
-            cy2 = func_800300F8(renderCtx, cy2, indicator, x, y, g_menuColor, (color * 64) + 2);
+            cy2 = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cy2, indicator, x, y, g_menuTint[MENU_TINT_NORMAL], (color * 64) + 2);
         }
         x += 0xA;
-        func_8002F294(currentVal, buf, func_80020F84(0xB)[1]);
-        fmtParam = func_80020F84(0xB)[1];
-        func_8002F2EC(&buf[2], 2, fmtParam, func_80020F84(0xB)[0]);
-        func_8002A2C4(buf, fmtResult);
+        intToDecStringShort(currentVal, buf, getMenuString(0xB)[1]);
+        fmtParam = getMenuString(0xB)[1];
+        replaceLeadingZeros(&buf[2], 2, fmtParam, getMenuString(0xB)[0]);
+        btlStrcat2(buf, fmtResult);
         cursorY = func_8002C56C(renderCtx, cy2, x, y, &buf[2], color);
     }
 
-    if (func_80037ADC() == 4) {
+    if (isMcBusy() == 4) {
         cfg->iconType = 0xFD;
     } else {
         cfg->iconType = 0xD1;
@@ -3313,7 +3313,7 @@ s32 renderStatTableB(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x60;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3394,21 +3394,21 @@ s32 renderStatTableC(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
             indicator = 0x6D;
             color = 3;
         }
-        cy2 = func_8002FF34(renderCtx, cursorY, entry->labelId, x, y, g_menuColor);
+        cy2 = drawIcon(renderCtx, cursorY, entry->labelId, x, y, g_menuTint[MENU_TINT_NORMAL]);
         x += 0x39;
         y += 4;
         if (indicator != 7) {
-            cy2 = func_800300F8(renderCtx, cy2, indicator, x, y, g_menuColor, (color * 64) + 2);
+            cy2 = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cy2, indicator, x, y, g_menuTint[MENU_TINT_NORMAL], (color * 64) + 2);
         }
         x += 0xA;
-        func_8002F294(currentVal, buf, func_80020F84(0xB)[1]);
-        fmtParam = func_80020F84(0xB)[1];
-        func_8002F2EC(bufPtr, 2, fmtParam, func_80020F84(0xB)[0]);
-        func_8002A2C4(buf, fmtResult);
+        intToDecStringShort(currentVal, buf, getMenuString(0xB)[1]);
+        fmtParam = getMenuString(0xB)[1];
+        replaceLeadingZeros(bufPtr, 2, fmtParam, getMenuString(0xB)[0]);
+        btlStrcat2(buf, fmtResult);
         cursorY = func_8002C56C(renderCtx, cy2, x, y, bufPtr, color);
     }
 
-    if (func_80037ADC() == 4) {
+    if (isMcBusy() == 4) {
         cfg->iconType = 0xFE;
     } else {
         cfg->iconType = 0xD2;
@@ -3418,7 +3418,7 @@ s32 renderStatTableC(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x43;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3428,8 +3428,8 @@ s32 renderStatTableC(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
  * Sibling of renderStatTableC (shares the D_801EEC10 table). Iterates 8 rows;
  * each reads a u16 stat value at the row's statOffset from the preview char
  * data (g_junctionPreview) and the current char (g_battleChars), compares them
- * for the up/down change indicator, optionally draws the '%' glyph (0xAF) when
- * func_801F5144 applies, then renders the label, indicator, and formatted value.
+ * for the up/down change indicator, optionally draws @c ICON_GREEN_STAR when
+ * func_801F5144 holds (a value of 901 or more), then renders the label, indicator, and formatted value.
  *
  * @param renderCtx Render context.
  * @param cursorY Current cursor Y position.
@@ -3488,24 +3488,24 @@ s32 renderStatTableD(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
             color = 3;
         }
         if (func_801F5144(currentVal) != 0) {
-            cursorY = func_8002FF34(renderCtx, cursorY, 0xAF, x + 0x12, y, g_menuColor);
+            cursorY = drawIcon(renderCtx, cursorY, ICON_GREEN_STAR, x + 0x12, y, g_menuTint[MENU_TINT_NORMAL]);
         }
         currentVal = func_801F510C(currentVal);
-        cy2 = func_8002FF34(renderCtx, cursorY, entry->labelId, x, y, g_menuColor);
+        cy2 = drawIcon(renderCtx, cursorY, entry->labelId, x, y, g_menuTint[MENU_TINT_NORMAL]);
         x += 0x39;
         y += 4;
         if (indicator != 7) {
-            cy2 = func_800300F8(renderCtx, cy2, indicator, x, y, g_menuColor, (color * 64) + 2);
+            cy2 = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cy2, indicator, x, y, g_menuTint[MENU_TINT_NORMAL], (color * 64) + 2);
         }
         x += 0xA;
-        func_8002F294(currentVal, buf, func_80020F84(0xB)[1]);
-        fmtParam = func_80020F84(0xB)[1];
-        func_8002F2EC(bufPtr, 2, fmtParam, func_80020F84(0xB)[0]);
-        func_8002A2C4(buf, fmtResult);
+        intToDecStringShort(currentVal, buf, getMenuString(0xB)[1]);
+        fmtParam = getMenuString(0xB)[1];
+        replaceLeadingZeros(bufPtr, 2, fmtParam, getMenuString(0xB)[0]);
+        btlStrcat2(buf, fmtResult);
         cursorY = func_8002C56C(renderCtx, cy2, x, y, bufPtr, color);
     }
 
-    if (func_80037ADC() == 4) {
+    if (isMcBusy() == 4) {
         cfg->iconType = 0xFF;
     } else {
         cfg->iconType = 0xD3;
@@ -3515,7 +3515,7 @@ s32 renderStatTableD(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x43;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3552,7 +3552,7 @@ s32 renderStatGrid(s32 renderCtx, s32 cursorY, s32 x, s32 y) {
             yOff = rem * 13 + 11;
             xPos = x + xOff;
             yPos = y + yOff;
-            cursorY = func_8002FF34(ctx, cursorY, table->category + 0xD8, xPos, yPos - 2, g_menuColor);
+            cursorY = drawIcon(ctx, cursorY, table->category + ICON_ABILITY_JUNCTION, xPos, yPos - 2, g_menuTint[MENU_TINT_NORMAL]);
             xPos += 14;
             namePtr = getAbilityName(table->slotIndex);
             gfInfo = 7;
@@ -3568,7 +3568,7 @@ s32 renderStatGrid(s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = 0x150;
     cfg->y = y;
     cfg->h = 0xA0;
-    return func_801EF9AC(ctx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(ctx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3638,7 +3638,7 @@ s32 renderStatDeltaBar(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     cfg->y = y;
     cfg->w = 244;
     cfg->h = h;
-    return func_801EF9AC(renderCtx, result, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3710,7 +3710,7 @@ s32 renderStatDeltaBarExt(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 
     g_menuDisplayCfg.w = barW;
     g_menuDisplayCfg.h = h;
 
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3835,7 +3835,7 @@ s32 renderGfMagicGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 xBas
             }
 
             namePtr = getMagicNamePtr(i + 0x40);
-            cursorY = func_8002E8DC(renderCtx, cursorY, x, y - 3, namePtr, color);
+            cursorY = (s32)drawDecodedText((P_TAG *)renderCtx, (TSPRT *)cursorY, x, y - 3, namePtr, color);
         }
     } while (++i < numGfs);
 
@@ -3848,7 +3848,7 @@ s32 renderGfMagicGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 xBas
     cursorY++;
     cursorY--;
     cfg->h = 0x5E;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3860,7 +3860,7 @@ s32 renderGfMagicGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 xBas
  * renders the GF magic name (id + 0x40) colored 7 when not junctioned,
  * 1 when junctioned to the displayed character (g_menuDisplayCfg.itemAttr),
  * or 0 when junctioned to another character. Junctioned GFs also get the
- * 0xC0 marker icon. Finally draws the GF level via drawColorByMenuPalette
+ * 0xC0 marker icon. Finally draws the GF level via drawNumberMenuTint
  * at a packed (y << 16 | x) position.
  *
  * @param renderCtx Render context.
@@ -3890,11 +3890,11 @@ s32 renderGfMagicEntry(s32 renderCtx, s32 cursorY, s32 col, s32 row, s32 xOff) {
         if (gf->charIdx != 0xFF) {
             ysum = 7 + g_menuDisplayCfg.y + row * 13;
             xsum = 0x6C + g_menuDisplayCfg.x + xOff;
-            cursorY = func_8002FF34(renderCtx, cursorY, 0xC0, xsum, ysum, g_menuColor);
+            cursorY = drawIcon(renderCtx, cursorY, ICON_JUNCTION_MARK, xsum, ysum, g_menuTint[MENU_TINT_NORMAL]);
         }
         ysum = 7 + g_menuDisplayCfg.y + row * 13;
         xsum = 0x90 + g_menuDisplayCfg.x + xOff;
-        cursorY = drawColorByMenuPalette(renderCtx, cursorY, (ysum << 16) | (xsum & 0xFFFF), gf->level, color);
+        cursorY = drawNumberMenuTint(renderCtx, cursorY, (ysum << 16) | (xsum & 0xFFFF), gf->level, color);
     }
     return cursorY;
 }
@@ -3904,7 +3904,7 @@ s32 renderGfMagicEntry(s32 renderCtx, s32 cursorY, s32 col, s32 row, s32 xOff) {
  *
  * Configures g_menuDisplayCfg for a scrollable GF list (icon 0x50,
  * 0x9A x 0x40, 4 columns), copies page/scroll/disc state from @p ctx,
- * renders a header icon via func_8002FF34, optionally draws a disc-count
+ * renders a header icon via drawIcon, optionally draws a disc-count
  * indicator via func_801F5F60 when five or more discs are present, draws
  * the list frame via func_801F5F30, and finally registers
  * renderGfMagicEntry as the per-item callback via func_801EFBB4.
@@ -3932,13 +3932,13 @@ s32 renderGfMagicPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     g_menuDisplayCfg.itemId = ctx->discCount;
     g_menuDisplayCfg.itemAttr = ctx->charIdx;
 
-    result = func_8002FF34(renderCtx, cursorY, 0x17, x + 0x7F, y, g_menuColor);
+    result = drawIcon(renderCtx, cursorY, ICON_LV, x + 0x7F, y, g_menuTint[MENU_TINT_NORMAL]);
 
     if (ctx->discCount >= 5) {
-        result = func_801F5F60(renderCtx, result, g_menuColor, 3);
+        result = func_801F5F60(renderCtx, result, g_menuTint[MENU_TINT_NORMAL], 3);
     }
 
-    result = func_801F5F30(renderCtx, result, x + 0x16, y, g_menuColor, ctx->unk44);
+    result = func_801F5F30(renderCtx, result, x + 0x16, y, g_menuTint[MENU_TINT_NORMAL], ctx->unk44);
     return func_801EFBB4(renderCtx, result, renderGfMagicEntry);
 }
 
@@ -4012,7 +4012,7 @@ s32 renderJunctionSlotDetail(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 wideM
     available = checkJunctionCompat(availFlags, gfFlags, abilityBit);
 
     xPos = x;
-    cursorY = func_800300F8(renderCtx, cursorY, entry->labelId, xPos, y, g_menuColor,
+    cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, entry->labelId, xPos, y, g_menuTint[MENU_TINT_NORMAL],
                             (!available) ? 0x1C0 : 0x80);
 
     if (wideMode) {
@@ -4042,10 +4042,10 @@ s32 renderJunctionSlotDetail(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 wideM
         if (availFlags & magicBit) {
             name = getMagicNamePtr(magicId);
         } else {
-            name = (u8 *)renderInnerPanel(0x1A);
+            name = renderInnerPanel(0x1A);
         }
     } else {
-        name = (u8 *)renderInnerPanel(0x1A);
+        name = renderInnerPanel(0x1A);
     }
     cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, name, available);
 
@@ -4068,7 +4068,7 @@ s32 renderJunctionSlotDetail(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 wideM
     xPos = x + 0x6A;
     yPos = y + 2;
     if (icon != 7) {
-        cursorY = func_800300F8(renderCtx, cursorY, icon, xPos, yPos, g_menuColor, (available * 64) + 2);
+        cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, icon, xPos, yPos, g_menuTint[MENU_TINT_NORMAL], (available * 64) + 2);
     }
 
     if (flags & 1) {
@@ -4084,7 +4084,7 @@ s32 renderJunctionSlotDetail(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 wideM
     if (flags & 0x20) {
         val = func_801F7BE4(val);
     }
-    cursorY = drawColorByMenuPalette(renderCtx, cursorY, xPos, val, available);
+    cursorY = drawNumberMenuTint(renderCtx, cursorY, xPos, val, available);
 
     if (flags & 0x80) {
         if (entry->flags & 1) {
@@ -4127,14 +4127,14 @@ s32 renderHpJunctionSlot(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 charIdx, 
     available = checkJunctionCompat(g_junctionChars[charIdx].availFlags, gfEntry->abilityFlags, 0x400);
 
     {
-        s32 menuCol = g_menuColor;
+        s32 menuCol = g_menuTint[MENU_TINT_NORMAL];
         /* Regalloc: y++/-- and do{cursorY++/--}while(0) raise reference counts
            to assign cursorY→s0, y→s1 (instead of default renderCtx→s0). */
         y++;
         y--;
         do { cursorY++; cursorY--; } while (0);
 
-        return func_800300F8(renderCtx, cursorY, 0x128, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
+        return (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_STATUS_ATTACK, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
     }
 }
 
@@ -4152,13 +4152,13 @@ s32 renderStatusDefSlot(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 charIdx, s
     available = checkJunctionCompat(g_junctionChars[charIdx].availFlags, gfEntry->abilityFlags, 0x19000);
 
     {
-        s32 menuCol = g_menuColor;
+        s32 menuCol = g_menuTint[MENU_TINT_NORMAL];
         /* Regalloc: see renderHpJunctionSlot comment. */
         y++;
         y--;
         do { cursorY++; cursorY--; } while (0);
 
-        return func_800300F8(renderCtx, cursorY, 0x129, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
+        return (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_STATUS_DEFENSE, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
     }
 }
 
@@ -4176,13 +4176,13 @@ s32 renderElemAtkSlot(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 charIdx, s32
     available = checkJunctionCompat(g_junctionChars[charIdx].availFlags, gfEntry->abilityFlags, 0x200);
 
     {
-        s32 menuCol = g_menuColor;
+        s32 menuCol = g_menuTint[MENU_TINT_NORMAL];
         /* Regalloc: see renderHpJunctionSlot comment. */
         y++;
         y--;
         do { cursorY++; cursorY--; } while (0);
 
-        return func_800300F8(renderCtx, cursorY, 0x12A, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
+        return (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_ELEMENTAL_ATTACK, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
     }
 }
 
@@ -4200,13 +4200,13 @@ s32 renderElemDefSlot(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 charIdx, s32
     available = checkJunctionCompat(g_junctionChars[charIdx].availFlags, gfEntry->abilityFlags, 0x6800);
 
     {
-        s32 menuCol = g_menuColor;
+        s32 menuCol = g_menuTint[MENU_TINT_NORMAL];
         /* Regalloc: see renderHpJunctionSlot comment. */
         y++;
         y--;
         do { cursorY++; cursorY--; } while (0);
 
-        return func_800300F8(renderCtx, cursorY, 0x12B, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
+        return (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_ELEMENTAL_DEFENSE, x, y, menuCol, (!available) ? 0x1C0 : 0x80);
     }
 }
 
@@ -4251,11 +4251,11 @@ s32 renderElemJunctionPanel(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 charId
     available = checkJunctionCompat(junc->availFlags, gfEntry->abilityFlags, 0x200);
     xPos = x + 0x10;
     yPos = y + 4;
-    cursorY = func_800300F8(renderCtx, cursorY, 0x12A, xPos, yPos, g_menuColor,
+    cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_ELEMENTAL_ATTACK, xPos, yPos, g_menuTint[MENU_TINT_NORMAL],
                             (!available) ? 0x1C0 : 0x80);
     magicId = g_gameState.chars[charIdx].junctions[JUNCTION_ATK_ELEM];
     if (magicId == 0) {
-        name = (u8 *)renderInnerPanel(0x1A);
+        name = renderInnerPanel(0x1A);
     } else {
         name = getMagicNamePtr(magicId);
     }
@@ -4270,21 +4270,21 @@ s32 renderElemJunctionPanel(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 charId
         /* No defensive slots available — draw a single empty row. */
         xPos = x + 0x10;
         yPos = y + 0x11;
-        cursorY = func_800300F8(renderCtx, cursorY, 0x12B, xPos, yPos, g_menuColor, 0x1C0);
+        cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_ELEMENTAL_DEFENSE, xPos, yPos, g_menuTint[MENU_TINT_NORMAL], 0x1C0);
         xPos = x + 0x30;
-        name = (u8 *)renderInnerPanel(0x1A);
+        name = renderInnerPanel(0x1A);
         cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, name, 0);
     } else {
         for (i = 0; i < numSlots; i++) {
             available = checkJunctionCompat(i < charSlots, i < gfSlots, 1);
             xPos = x + 0x10;
             yPos = y + 0x11 + i * 13;
-            cursorY = func_800300F8(renderCtx, cursorY, 0x12B, xPos, yPos, g_menuColor,
+            cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_ELEMENTAL_DEFENSE, xPos, yPos, g_menuTint[MENU_TINT_NORMAL],
                                     (!available) ? 0x1C0 : 0x80);
             xPos = x + 0x30;
             magicId = g_gameState.chars[charIdx].junctions[JUNCTION_DEF_ELEM_0 + i];
             if (magicId == 0) {
-                name = (u8 *)renderInnerPanel(0x1A);
+                name = renderInnerPanel(0x1A);
             } else {
                 name = getMagicNamePtr(magicId);
             }
@@ -4333,11 +4333,11 @@ s32 renderStatusJunctionPanel(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 char
     available = checkJunctionCompat(junc->availFlags, gfEntry->abilityFlags, 0x400);
     xPos = x + 0x10;
     yPos = y + 4;
-    cursorY = func_800300F8(renderCtx, cursorY, 0x128, xPos, yPos, g_menuColor,
+    cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_STATUS_ATTACK, xPos, yPos, g_menuTint[MENU_TINT_NORMAL],
                             (!available) ? 0x1C0 : 0x80);
     magicId = g_gameState.chars[charIdx].junctions[JUNCTION_ATK_STATUS];
     if (magicId == 0) {
-        name = (u8 *)renderInnerPanel(0x1A);
+        name = renderInnerPanel(0x1A);
     } else {
         name = getMagicNamePtr(magicId);
     }
@@ -4352,21 +4352,21 @@ s32 renderStatusJunctionPanel(s32 renderCtx, s32 cursorY, s32 x, s32 y, s32 char
         /* No defensive slots available — draw a single empty row. */
         xPos = x + 0x10;
         yPos = y + 0x11;
-        cursorY = func_800300F8(renderCtx, cursorY, 0x129, xPos, yPos, g_menuColor, 0x1C0);
+        cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_STATUS_DEFENSE, xPos, yPos, g_menuTint[MENU_TINT_NORMAL], 0x1C0);
         xPos = x + 0x30;
-        name = (u8 *)renderInnerPanel(0x1A);
+        name = renderInnerPanel(0x1A);
         cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, name, 0);
     } else {
         for (i = 0; i < numSlots; i++) {
             available = checkJunctionCompat(i < charSlots, i < gfSlots, 1);
             xPos = x + 0x10;
             yPos = y + 0x11 + i * 13;
-            cursorY = func_800300F8(renderCtx, cursorY, 0x129, xPos, yPos, g_menuColor,
+            cursorY = (s32)drawIconClut((void *)renderCtx, (TSPRT *)cursorY, ICON_JUNCTION_STATUS_DEFENSE, xPos, yPos, g_menuTint[MENU_TINT_NORMAL],
                                     (!available) ? 0x1C0 : 0x80);
             xPos = x + 0x30;
             magicId = g_gameState.chars[charIdx].junctions[JUNCTION_DEF_STATUS_0 + i];
             if (magicId == 0) {
-                name = (u8 *)renderInnerPanel(0x1A);
+                name = renderInnerPanel(0x1A);
             } else {
                 name = getMagicNamePtr(magicId);
             }
@@ -4455,7 +4455,7 @@ s32 setupStatBorderPanel(s32 ctx, s32 mode, s32 x, s32 y, s32 renderParam) {
     g_menuDisplayCfg.w = 0x150;
     g_menuDisplayCfg.h = 0x48;
     g_menuDisplayCfg.y = y;
-    return func_801EF9AC(ctx, mode, renderParam, g_menuColor);
+    return func_801EF9AC(ctx, mode, renderParam, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4473,7 +4473,7 @@ s32 setupStatBorderPanel(s32 ctx, s32 mode, s32 x, s32 y, s32 renderParam) {
  */
 s32 renderJunctionHeader(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     MenuDisplayConfig *cfg = &g_menuDisplayCfg;
-    s32 p1, p2;
+    u8 *p1, *p2;
     s32 xPos, yPos;
     s32 icon1, icon2;
     s32 seven = 7;
@@ -4502,15 +4502,15 @@ s32 renderJunctionHeader(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x
 
     xPos = x + 0x10;
     yPos = y + 6;
-    cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, (u8 *)p1, seven);
+    cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, p1, seven);
     xPos = x + 0x4B;
-    cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, (u8 *)p2, seven);
+    cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, p2, seven);
 
     xPos = x + 8;
     yPos = y + 7;
-    cursorY = func_8002FF34(renderCtx, cursorY, icon1, xPos, yPos, g_menuColor);
+    cursorY = drawIcon(renderCtx, cursorY, icon1, xPos, yPos, g_menuTint[MENU_TINT_NORMAL]);
     xPos = x + 0x41;
-    cursorY = func_8002FF34(renderCtx, cursorY, icon2, xPos, yPos, g_menuColor);
+    cursorY = drawIcon(renderCtx, cursorY, icon2, xPos, yPos, g_menuTint[MENU_TINT_NORMAL]);
 
     cfg->iconType = 0;
     cfg->iconSubType = 0;
@@ -4518,7 +4518,7 @@ s32 renderJunctionHeader(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x16;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4572,7 +4572,7 @@ s32 renderJunctionComposite(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s3
  * currently junctioned (func_801F1CE8, which also earns the 0xC0
  * junction marker icon), or 0 when unavailable per the availability
  * bitmask in g_menuDisplayCfg.dataPtr. The stocked quantity is drawn
- * via drawColorByMenuPalette at a packed (y << 16 | x) position.
+ * via drawNumberMenuTint at a packed (y << 16 | x) position.
  *
  * @param renderCtx Render context.
  * @param cursorY Current draw cursor position (chained through each call).
@@ -4604,7 +4604,7 @@ s32 renderMagicJunctionEntry(s32 renderCtx, s32 cursorY, s32 col, s32 row, s32 x
         if (func_801F1CE8(charIdx, magicId) != 0) {
             ysum = 7 + g_menuDisplayCfg.y + row * 13;
             xsum = 0x49 + g_menuDisplayCfg.x + xOff;
-            cursorY = func_8002FF34(renderCtx, cursorY, 0xC0, xsum, ysum, g_menuColor);
+            cursorY = drawIcon(renderCtx, cursorY, ICON_JUNCTION_MARK, xsum, ysum, g_menuTint[MENU_TINT_NORMAL]);
             color = 1;
         }
         bit = 1 << slot;
@@ -4615,7 +4615,7 @@ s32 renderMagicJunctionEntry(s32 renderCtx, s32 cursorY, s32 col, s32 row, s32 x
         cursorY = func_801F0FEC(renderCtx, cursorY, 0xC + g_menuDisplayCfg.x + xOff, 7 + g_menuDisplayCfg.y + row * 13, namePtr, color);
         ysum = 7 + g_menuDisplayCfg.y + row * 13;
         xsum = 0x6C + g_menuDisplayCfg.x + xOff;
-        cursorY = drawColorByMenuPalette(renderCtx, cursorY, (ysum << 16) | (xsum & 0xFFFF), qty, color);
+        cursorY = drawNumberMenuTint(renderCtx, cursorY, (ysum << 16) | (xsum & 0xFFFF), qty, color);
     }
     return cursorY;
 }
@@ -4627,7 +4627,7 @@ s32 renderMagicJunctionEntry(s32 renderCtx, s32 cursorY, s32 col, s32 row, s32 x
  * 0x78 x 0x40, 4 columns), copies page/scroll/character state from @p ctx
  * (including the ability data pointer into cfg.dataPtr), optionally draws a
  * disc-count indicator via func_801F5F60 when five or more discs are present,
- * renders a header icon via func_8002FF34, draws the list frame via
+ * renders a header icon via drawIcon, draws the list frame via
  * func_801F5F30, and finally registers renderMagicJunctionEntry as the
  * per-item callback via func_801EFBB4.
  *
@@ -4653,11 +4653,11 @@ s32 renderMagicListPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x
     g_menuDisplayCfg.dataPtr = ctx->dataPtr2;
 
     if (ctx->discCount >= 5) {
-        cursorY = func_801F5F60(renderCtx, cursorY, g_menuColor, 3);
+        cursorY = func_801F5F60(renderCtx, cursorY, g_menuTint[MENU_TINT_NORMAL], 3);
     }
 
-    cursorY = func_8002FF34(renderCtx, cursorY, 0x4D, x + 0x54, y, g_menuColor);
-    cursorY = func_801F5F30(renderCtx, cursorY, x + 0x24, y, g_menuColor, ctx->unk44);
+    cursorY = drawIcon(renderCtx, cursorY, ICON_NUM, x + 0x54, y, g_menuTint[MENU_TINT_NORMAL]);
+    cursorY = func_801F5F30(renderCtx, cursorY, x + 0x24, y, g_menuTint[MENU_TINT_NORMAL], ctx->unk44);
     return func_801EFBB4(renderCtx, cursorY, renderMagicJunctionEntry);
 }
 
@@ -4711,7 +4711,7 @@ s32 renderAbilityListEntry(s32 ctx, s32 cursorY, s32 row, s32 col, s32 panelX) {
                 highlight = 7;
             }
             if (iconId != 0xFF) {
-                cursorY = func_8002FF34(ctx, cursorY, iconId + 0xD8, stringX, textY - 2, g_menuColor);
+                cursorY = drawIcon(ctx, cursorY, iconId + ICON_ABILITY_JUNCTION, stringX, textY - 2, g_menuTint[MENU_TINT_NORMAL]);
             }
             {
                 s32 xOff = panelX + 0x24;
@@ -4812,10 +4812,10 @@ s32 renderAbilityListPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32
         break;
     }
 
-    cursorY = func_801F5F30(renderCtx, cursorY, panelX + 0x28, y, g_menuColor, ctx->unk44);
+    cursorY = func_801F5F30(renderCtx, cursorY, panelX + 0x28, y, g_menuTint[MENU_TINT_NORMAL], ctx->unk44);
 
     if (cfg->itemId >= 0xC) {
-        cursorY = func_801F5F60(renderCtx, cursorY, g_menuColor, 3);
+        cursorY = func_801F5F60(renderCtx, cursorY, g_menuTint[MENU_TINT_NORMAL], 3);
     }
 
     return func_801EFBB4(renderCtx, cursorY, renderAbilityListEntry);
@@ -4825,7 +4825,7 @@ s32 renderAbilityListPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32
  * @brief Render the character's 3 equipped-command rows with junction highlighting.
  *
  * Reads the character index from @c ctx->charIdx, renders the character title (looked
- * up via @c func_80020EF4 from @c g_charMenuInfo[charIdx].unk12), then loops over the
+ * up via @c getBattleCommandName from @c g_charMenuInfo[charIdx].unk12), then loops over the
  * 3 equipped commands (@c g_gameState.chars[charIdx].commands[i]). Each command is
  * drawn with its category icon (@c getAbilityCategory) and name (@c getAbilityName),
  * highlighted (color 1 instead of 7) when the junction slot being edited — queried
@@ -4859,7 +4859,7 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
     xPos = x + 0x21;
     yPos = y + 9;
     highlight = 7;
-    title = func_80020EF4((*(cmiTable = &g_charMenuInfo))[ctx->charIdx].unk12);
+    title = getBattleCommandName((*(cmiTable = &g_charMenuInfo))[ctx->charIdx].unk12);
     cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, title, highlight);
 
     for (i = 0; i < 3; i++) {
@@ -4884,12 +4884,12 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
         if (cmdId != 0) {
             /* FIXME: regalloc hack — xPos is reused here as scratch for the category icon */
             xPos = getAbilityCategory(cmdId) + 0xD8;
-            cursorY = func_8002FF34(renderCtx, cursorY, xPos, x + 0x13, yPos - 2, g_menuColor);
+            cursorY = drawIcon(renderCtx, cursorY, xPos, x + 0x13, yPos - 2, g_menuTint[MENU_TINT_NORMAL]);
             xPos = x + 0x21;
             cursorY = func_801F0FEC(renderCtx, cursorY, xPos, yPos, getAbilityName(cmdId), highlight);
         }
         xPos = x + 7;
-        cursorY = func_8002FF34(renderCtx, cursorY, 0x7E, xPos, yPos + 2, g_menuColor);
+        cursorY = drawIcon(renderCtx, cursorY, ICON_SMALL_ARROW_RIGHT, xPos, yPos + 2, g_menuTint[MENU_TINT_NORMAL]);
     }
 
     cfg->iconType = 0x48;
@@ -4898,7 +4898,7 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x48;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4908,7 +4908,7 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
  * @c g_junctionChars[charIdx].abilityRows ability rows for that character. Each nonzero
  * ability slot draws a category icon (via @c getAbilityCategory) and the
  * ability name (via @c getAbilityName), plus a fixed separator glyph; the
- * running display-list pointer is threaded through @c func_8002FF34 /
+ * running display-list pointer is threaded through @c drawIcon /
  * @c func_801F0FEC and the surrounding panel is closed with @c func_801EF9AC.
  *
  * @param ctx       Junction menu context.
@@ -4939,11 +4939,11 @@ s32 renderGfCompatGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
             y2 = y + 9 + i * 13;
             gf = g_gameState.chars[charIdx].abilities[i];
             if (gf != 0) {
-                result = func_8002FF34(renderCtx, result, getAbilityCategory(gf) + 0xD8, x + 0x2E, y2 - 2, g_menuColor);
+                result = drawIcon(renderCtx, result, getAbilityCategory(gf) + ICON_ABILITY_JUNCTION, x + 0x2E, y2 - 2, g_menuTint[MENU_TINT_NORMAL]);
                 cursorY = x + 0x3C;
                 result = func_801F0FEC(renderCtx, result, cursorY, y2, getAbilityName(gf), new_var);
             }
-            result = func_8002FF34(renderCtx, result, 0x7E, x + 0x22, y2 + 2, g_menuColor);
+            result = drawIcon(renderCtx, result, ICON_SMALL_ARROW_RIGHT, x + 0x22, y2 + 2, g_menuTint[MENU_TINT_NORMAL]);
             i++;
         } while (i < g_junctionChars[charIdx].abilityRows);
     }
@@ -4953,7 +4953,7 @@ s32 renderGfCompatGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x48;
-    return func_801EF9AC(renderCtx, result, 0x1000, g_menuColor);
+    return func_801EF9AC(renderCtx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -5007,14 +5007,14 @@ s32 renderCharSwitchPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 
             x2 += 0x180;
         }
         chr = ctx->prevCharIdx;
-        rec = &D_80077808[chr];
+        rec = &g_characters[chr];
         info = &g_charMenuInfo[chr];
         cursorY = func_801F65F0(renderCtx, cursorY, x2, y2, rec, info);
         x2 = x + scale;
         y2 = y;
     }
     chr = ctx->charIdx;
-    rec = &D_80077808[chr];
+    rec = &g_characters[chr];
     info = &g_charMenuInfo[chr];
     return func_801F65F0(renderCtx, cursorY, x2, y2, rec, info);
 }
@@ -5051,7 +5051,7 @@ s32 renderCharNameBar(s32 renderCtx, s32 cursorY, s32 x, s32 height, s32 charIdx
             u8 *namePtr = getCharName(g_gameState.chars[charIdx].characterId);
             cursorY = func_801F0FEC(renderCtx, cursorY, x, height, namePtr, gfInfo);
         }
-        return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuColor);
+        return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
     } while (0);
 }
 
@@ -5130,7 +5130,7 @@ s32 renderJunctionMenu(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY) {
     scale = D_801FA3C8[scale / 64];
     pos = 10;
     func_801F1AFC();
-    setMenuColorIntensity(ctx->unk3A);
+    setMenuBrightness(ctx->unk3A);
     showGf = 0;
     dl = renderStatDeltaBarExt(ctx, renderCtx, dl, 0x18, pos);
     cursorY = renderStatDeltaBar(ctx, renderCtx, cursorY, 0x18, pos);
@@ -5333,7 +5333,7 @@ void initJunctionMenu(MenuParentCtx *parentCtx) {
     JunctionMenuCtx *ctx;
     s32 i;
 
-    ctx = (JunctionMenuCtx *)func_801F179C((s32)junctionMenuUpdate, (s32)renderJunctionMenu);
+    ctx = func_801F179C(junctionMenuUpdate, renderJunctionMenu);
     func_801F5300();
     if (ctx != NULL) {
         ctx->parentParam = parentCtx->param;

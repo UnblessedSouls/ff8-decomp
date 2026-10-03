@@ -1,10 +1,12 @@
 #include "common.h"
+#include "menu_tint.h"
 #include "card.h"
 #include "menugf.h"
 
 extern u8 g_menuDisplayCfg[];
 extern u8 g_gameState[];
-extern s32 g_menuColor;
+
+s32 func_801E6A8C(s32, s32, s32, s32, s32);
 
 INCLUDE_ASM("asm/ovl/menugf/nonmatchings/menugf", func_801E5800);
 
@@ -90,7 +92,7 @@ void func_801E6B3C(u8 *a0, s32 a1, s32 a2, s32 a3, s32 arg4) {
     *(s16 *)(cfg + 0x02) = arg4;
     *(s16 *)(cfg + 0x14) = *(u16 *)(a0 + 0x28);
     *(s32 *)(cfg + 0x20) = (s32)(a0 + 0x20);
-    func_801EFBB4(a1, a2, (s32)func_801E6A8C);
+    func_801EFBB4(a1, a2, func_801E6A8C);
 }
 
 INCLUDE_ASM("asm/ovl/menugf/nonmatchings/menugf", func_801E6BB8);
@@ -121,7 +123,7 @@ void func_801E6C84(s32 a0, s32 a1) {
     *(s16 *)(cfg + 0x02) = 0x38;
     *(s16 *)(cfg + 0x04) = 0x150;
     *(s16 *)(cfg + 0x06) = 0xA0;
-    func_801EF9AC(ctx, result, 0x1000, g_menuColor);
+    func_801EF9AC(ctx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -129,7 +131,7 @@ void func_801E6C84(s32 a0, s32 a1) {
  *
  * Tests a bit in the g_gameState ability table at offset 0x4E8, indexed by
  * @p arg4 (stride 152) and shifted by @p arg6. If the bit is set, renders
- * a highlighted entry via func_8002FF34; otherwise skips. Then renders the
+ * a highlighted entry via drawIcon; otherwise skips. Then renders the
  * ability name and icon via func_801F0FEC and func_801F4EA8.
  *
  * @param a0    Entity/context pointer
@@ -160,9 +162,9 @@ void func_801E6D20(s32 a0, s32 a1, s32 a2, s32 a3, s32 arg4, volatile unsigned i
     new_var2 = arg4;
 
     if (((*((u16 *)((base + ((2 * new_var2) * 76)) + new_var5))) >> arg6) & 1) {
-        new_var4 = g_menuColor;
+        new_var4 = g_menuTint[MENU_TINT_NORMAL];
         result = (new_var2 = new_var4);
-        a1 = func_8002FF34(a0, a1, 0xC0, a2 - 10, a3, result);
+        a1 = drawIcon(a0, a1, 0xC0, a2 - 10, a3, result);
     }
 
     arg4 = a2;

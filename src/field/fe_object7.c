@@ -1,12 +1,18 @@
 #include "common.h"
 #include "battle.h"
+#include "ui/countdown.h"
+#include "ui/gauge.h"
+#include "ui/seed_rank.h"
 #include "gamestate.h"
 #include "field.h"
 #include "sound.h"
 #include "psxsdk/libgte.h"
 #include "field/fe_object1.h"
 #include "field/fe_object1_2.h"
+#include "field/fe_object1b.h"
 #include "field/fe_object7.h"
+#include "ui/dialog.h"
+#include "ui/text.h"
 
 /**
  * @brief Pop a key item ID and store its value.
@@ -51,21 +57,21 @@ s32 opHandler_CARDGAME(ScriptContext *context) {
 
         if (result >= 5) {
             if (!(g_fieldVars->stateFlags & FIELD_STATE_FIELD_READY)) {
-                initBattleTransition();
+                resetSeedRankNotification();
             }
 
-            D_800704A8.mode = 8;
-            D_800704A8.counter = 0;
+            g_fieldEntity.mode = 8;
+            g_fieldEntity.counter = 0;
 
             while (sndGetStatus() == 2) {
                 func_800393C8();
             }
 
             for (i = 0; i < 2; i++) {
-                clearAnimEntryActive(i);
+                hideGauge(i);
             }
 
-            setCameraVibrateState(0);
+            setCountdownVisible(0);
 
             if (g_fieldVars->soundHandle0 == SND_HANDLE_NONE) {
                 sndCmd11(0);
@@ -249,7 +255,7 @@ s32 opHandler_DRAWPOINT(Actor *actor) {
     u8 *text;
     u32 dims;
     s32 i;
-    s16 rect[4];
+    RECT rect;
 
     fieldIdx = PEEK(&actor->context) - 1;
     tableResult = lookupFieldTable(fieldIdx);
@@ -261,32 +267,32 @@ s32 opHandler_DRAWPOINT(Actor *actor) {
     switch (actor->field_0x204) {
     case 0:
         g_fieldVars->fieldF2 = fieldIdx;
-        setSfxEntryVolume(6, 0x1000);
-        setSfxEntityType(6, 6);
+        setDialogBrightness(6, 0x1000);
+        setDialogEntityType(6, 6);
 
         if (func_800B5990()) {
             i = getPackedField2Bit(fieldIdx);
             if (i == 3 || getPackedField2Bit(fieldIdx) == 2) {
-                text = func_800B574C(func_8003974C(D_8005630C, 3));
+                text = func_800B574C(getOffsetTableEntry(&D_8005630C, 3));
             } else {
-                text = func_800B574C(func_8003974C(D_8005630C, 2));
+                text = func_800B574C(getOffsetTableEntry(&D_8005630C, 2));
                 text = func_800B578C(0xC, tableResult & 0x3F);
                 sndPlaySfx(0x42, 0, 0x80, 0x7F);
             }
         } else {
-            text = func_800B574C(func_8003974C(D_8005630C, 7));
+            text = func_800B574C(getOffsetTableEntry(&D_8005630C, 7));
         }
 
-        initSfxPlayback(6, text);
-        dims = func_8002E680(text);
-        rect[2] = (dims & 0xFFFF) + 0x10;
-        rect[3] = (dims >> 16) + 0x11;
-        rect[0] = 0xA0 - rect[2] / 2;
-        rect[1] = 0x70 - rect[3] / 2;
-        func_8002E064(6, rect);
-        startSfxSlow(6);
-        setSfxGlobalFlag(6);
-        g_fieldVars->sfxStartMask |= 0x40;
+        setDialogMessage(6, text);
+        dims = measureMessage(text);
+        rect.w = (dims & 0xFFFF) + 0x10;
+        rect.h = (dims >> 16) + 0x11;
+        rect.x = 0xA0 - rect.w / 2;
+        rect.y = 0x70 - rect.h / 2;
+        setDialogRect(6, &rect);
+        openDialogAnimated(6);
+        setFocusedDialog(6);
+        g_fieldVars->dialogStartMask |= 0x40;
 
         if (tableResult & 0x80) {
             D_800DE4D0 = 0x14;
@@ -304,7 +310,7 @@ s32 opHandler_DRAWPOINT(Actor *actor) {
         break;
 
     case 1:
-        if (g_fieldVars->sfxStartMask & 0x40) {
+        if (g_fieldVars->dialogStartMask & 0x40) {
             return 1;
         }
 
@@ -331,30 +337,30 @@ s32 opHandler_DRAWPOINT(Actor *actor) {
             }
         }
 
-        text = func_800B574C(func_8003974C(D_8005630C, 4));
+        text = func_800B574C(getOffsetTableEntry(&D_8005630C, 4));
         text = func_800B57E8(D_800DE4D4, tableResult & 0x3F);
-        dims = func_8002E680(text);
-        rect[2] = (dims & 0xFFFF) + 0x30;
-        rect[3] = (dims >> 16) + 0x11;
-        rect[0] = 0xA0 - rect[2] / 2;
-        rect[1] = 0x70 - rect[3] / 2;
-        func_8002E064(6, rect);
-        func_8002D784(6, text, 1, D_800DE4D4 + 1, 2, 1);
-        startSfxSlow(6);
-        setSfxGlobalFlag(6);
-        g_fieldVars->sfxStartMask |= 0x40;
-        g_fieldVars->sfxActiveMask |= 0x40;
+        dims = measureMessage(text);
+        rect.w = (dims & 0xFFFF) + 0x30;
+        rect.h = (dims >> 16) + 0x11;
+        rect.x = 0xA0 - rect.w / 2;
+        rect.y = 0x70 - rect.h / 2;
+        setDialogRect(6, &rect);
+        setDialogChoiceMessage(6, text, 1, D_800DE4D4 + 1, 2, 1);
+        openDialogAnimated(6);
+        setFocusedDialog(6);
+        g_fieldVars->dialogStartMask |= 0x40;
+        g_fieldVars->dialogActiveMask |= 0x40;
         actor->field_0x204++;
         break;
 
     case 3:
-        setSfxGlobalFlag(6);
-        D_800DE4D2 = func_8002CE84(6);
+        setFocusedDialog(6);
+        D_800DE4D2 = getDialogChoice(6);
         if ((s8)D_800DE4D2 < 0) {
             return 1;
         }
-        fadeOutSfxSlow(6);
-        g_fieldVars->sfxActiveMask &= ~0x40;
+        closeDialogAnimated(6);
+        g_fieldVars->dialogActiveMask &= ~0x40;
 
         if ((s8)D_800DE4D2 == 0) {
             actor->context.resultSlots[0] = 0;
@@ -368,7 +374,7 @@ s32 opHandler_DRAWPOINT(Actor *actor) {
 
     case 4:
         D_800DE4D3 = func_80037C6C(g_gameState.battleParty[D_800DE4D2]);
-        if (getSfxField1C(6)) {
+        if (getOpenDialogScale(6)) {
             return 1;
         }
 
@@ -397,36 +403,36 @@ s32 opHandler_DRAWPOINT(Actor *actor) {
                 }
             }
 
-            func_8002E1B4(7, i);
+            setMessageValue(7, i);
 
             if (i != 0) {
-                text = func_800B574C(func_8003974C(D_8005630C, 5));
+                text = func_800B574C(getOffsetTableEntry(&D_8005630C, 5));
             } else {
-                text = func_800B574C(func_8003974C(D_8005630C, 6));
+                text = func_800B574C(getOffsetTableEntry(&D_8005630C, 6));
                 actor->field_0x204 = 0;
             }
         } else {
-            text = func_800B574C(func_8003974C(D_8005630C, 6));
+            text = func_800B574C(getOffsetTableEntry(&D_8005630C, 6));
             actor->field_0x204 = 0;
         }
 
         func_800B578C(3, g_gameState.battleParty[D_800DE4D2]);
         text = func_800B578C(0xC, tableResult & 0x3F);
-        initSfxPlayback(6, text);
-        dims = func_8002E680(text);
-        rect[2] = (dims & 0xFFFF) + 0x10;
-        rect[3] = (dims >> 16) + 0x11;
-        rect[0] = 0xA0 - rect[2] / 2;
-        rect[1] = 0x70 - rect[3] / 2;
-        func_8002E064(6, rect);
-        startSfxSlow(6);
-        setSfxGlobalFlag(6);
-        g_fieldVars->sfxStartMask |= 0x40;
+        setDialogMessage(6, text);
+        dims = measureMessage(text);
+        rect.w = (dims & 0xFFFF) + 0x10;
+        rect.h = (dims >> 16) + 0x11;
+        rect.x = 0xA0 - rect.w / 2;
+        rect.y = 0x70 - rect.h / 2;
+        setDialogRect(6, &rect);
+        openDialogAnimated(6);
+        setFocusedDialog(6);
+        g_fieldVars->dialogStartMask |= 0x40;
         actor->field_0x204++;
         break;
 
     case 7:
-        if (g_fieldVars->sfxStartMask & 0x40) {
+        if (g_fieldVars->dialogStartMask & 0x40) {
             return 1;
         }
 
@@ -483,7 +489,7 @@ s32 opHandler_UNKNOWN10(ScriptContext *context) {
  * @return 2 (continue processing).
  */
 s32 opHandler_PARTICLEON(ScriptContext *context) {
-    D_800704A8.slotActive[POP(context) & 0xF] = 1;
+    g_fieldEntity.slotActive[POP(context) & 0xF] = 1;
     return 2;
 }
 
@@ -494,7 +500,7 @@ s32 opHandler_PARTICLEON(ScriptContext *context) {
  * @return 2 (continue processing).
  */
 s32 opHandler_PARTICLEOFF(ScriptContext *context) {
-    D_800704A8.slotActive[POP(context) & 0xF] = 0;
+    g_fieldEntity.slotActive[POP(context) & 0xF] = 0;
     return 2;
 }
 
@@ -505,7 +511,7 @@ s32 opHandler_PARTICLEOFF(ScriptContext *context) {
  * @return 2 (continue processing).
  */
 s32 opHandler_PARTICLESET(Actor *actor) {
-    D_800704A8.slotActive[POP(&actor->context) & 0xF] = actor->field_0x256 | 0x80;
+    g_fieldEntity.slotActive[POP(&actor->context) & 0xF] = actor->field_0x256 | 0x80;
     return 2;
 }
 
@@ -561,13 +567,13 @@ s32 opHandler_SETPLACE(ScriptContext *context) {
 }
 
 /**
- * @brief Pop a value and store to both D_80082C0A and WorldContext field_0xB6.
+ * @brief Pop a value and store to both g_battleConfig.unk2 and WorldContext field_0xB6.
  *
  * @param actor Pointer to the actor (script context).
  * @return 2 (continue processing).
  */
 s32 opHandler_BATTLEMODE(ScriptContext *context) {
-    D_80082C0A = g_fieldVars->fieldB6 = POP(context);
+    g_battleConfig.unk2 = g_fieldVars->fieldB6 = POP(context);
     do {} while (0);
     return 2;
 }
@@ -579,11 +585,11 @@ s32 opHandler_BATTLEMODE(ScriptContext *context) {
  * @return 3 (special return — triggers mode transition).
  */
 s32 opHandler_BATTLE(ScriptContext *context) {
-    if (D_800704A8.mode == 0) {
-        D_800704A8.mode = 3;
+    if (g_fieldEntity.mode == 0) {
+        g_fieldEntity.mode = 3;
     }
-    D_80082C0A = POP(context);
-    D_800704A8.counter = POP(context);
+    g_battleConfig.unk2 = POP(context);
+    g_fieldEntity.counter = POP(context);
     return 3;
 }
 
@@ -594,7 +600,7 @@ s32 opHandler_BATTLE(ScriptContext *context) {
  * @return 2 (continue processing).
  */
 s32 opHandler_BATTLERESULT(ScriptContext *context) {
-    context->resultSlots[0] = D_80082C0F;
+    context->resultSlots[0] = g_battleConfig.result;
     return 2;
 }
 
@@ -637,7 +643,7 @@ s32 opHandler_BATTLECUT(ScriptContext *context) {
  * @return 1 (yield).
  */
 s32 opHandler_GAMEOVER(ScriptContext *context) {
-    D_800704A8.mode = 4;
+    g_fieldEntity.mode = 4;
     return 1;
 }
 
@@ -1706,7 +1712,7 @@ s32 opHandler_PJUMPA(Actor *actor) {
 
 /**
  * @brief Pop a word from the bytecode stack and store its low byte to
- *        @c D_800704A8.unk1AE.
+ *        @c g_fieldEntity.unk1AE.
  *
  * The @c volatile cast on the load is required to prevent gcc 2.7.2
  * from narrowing the @c lw to @c lbu — the target reads a full s32
@@ -1716,7 +1722,7 @@ s32 opHandler_PJUMPA(Actor *actor) {
  * @return 2 (advance PC).
  */
 s32 opHandler_COUNTERCLOCKWISETURN2(ScriptContext *context) {
-    D_800704A8.unk1AE = *(volatile s32 *)&POP(context);
+    g_fieldEntity.unk1AE = *(volatile s32 *)&POP(context);
     return 2;
 }
 
@@ -2099,7 +2105,7 @@ s32 opHandler_INITTRACE(ScriptContext *context) {
 }
 
 /**
- * @brief Wait until @c D_800704A8.unk106 catches up with @c unk104.
+ * @brief Wait until @c g_fieldEntity.unk106 catches up with @c unk104.
  *
  * Read by scripts to wait for the animation tick set by
  * @c opHandler_AXIS (POP → @c unk104, @c unk106 = 0) — some other
@@ -2109,14 +2115,14 @@ s32 opHandler_INITTRACE(ScriptContext *context) {
  * @return 2 (advance) when @c unk104 == @c unk106, 1 (yield) otherwise.
  */
 s32 opHandler_AXISSYNC(ScriptContext *context) {
-    if (D_800704A8.unk106 == D_800704A8.unk104) {
+    if (g_fieldEntity.unk106 == g_fieldEntity.unk104) {
         return 2;
     }
     return 1;
 }
 
 /**
- * @brief Pop two halfwords into D_800704A8.unk102/unk104; clear unk106.
+ * @brief Pop two halfwords into g_fieldEntity.unk102/unk104; clear unk106.
  *
  * Writes the popped values into the SystemState block: first POP →
  * @c unk104, second POP → @c unk102. Also zeros @c unk106. Leaf
@@ -2126,9 +2132,9 @@ s32 opHandler_AXISSYNC(ScriptContext *context) {
  * @return 2 (advance PC).
  */
 s32 opHandler_AXIS(ScriptContext *context) {
-    D_800704A8.unk104 = POP(context);
-    D_800704A8.unk102 = POP(context);
-    D_800704A8.unk106 = 0;
+    g_fieldEntity.unk104 = POP(context);
+    g_fieldEntity.unk102 = POP(context);
+    g_fieldEntity.unk106 = 0;
     return 2;
 }
 

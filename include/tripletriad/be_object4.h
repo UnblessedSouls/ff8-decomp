@@ -80,7 +80,7 @@ extern void closeMenu(void);
 extern void func_800A1C6C(void);
 /** @brief Flush the queued Triple Triad SFX to the SPU and empty the queue. */
 extern void flushTriadSfxQueue(void);
-extern void clearAllSfx(void);
+extern void clearAllDialogs(void);
 /** @brief Show a card's name, or build its detail popup buffer. */
 extern void showCardDetail(s32 cardId);
 /** @brief Open the Triple Triad in-game menu and freeze card input. */
@@ -88,21 +88,21 @@ extern void openTriadMenu(void);
 
 /* Message-gate / banner + hand-build UI helpers (used by be_object3 / be_object3b). */
 extern void func_800A1D68(s32 a0, u8 *a1, s32 a2);  /**< Show a banner/message string. */
-extern void func_800A2054(s32 a0);                  /**< Acknowledge/advance a message gate. */
+extern void func_800A2054(s32 id); /**< Close dialog id, at once or with its animation per its flag. */
 extern void func_800A44CC(void);   /**< Reset the hand-build UI state for a new claim sequence. */
 extern void func_800A44B0(s32 a0); /**< Enable (1) / disable (0) the hand-build input prompt. */
 extern void func_800A44BC(void);   /**< Tear down the claim UI at the end of the sequence. */
 
 /* ───────────────────── be_object4-internal typedefs ───────────────────── */
 
-/** @brief One 0x0C-byte entry of the D_80182E70 per-SFX configuration table. */
+/** @brief One 0x0C-byte entry of the D_80182E70 per-dialog configuration table. */
 typedef struct {
-    /* 0x00 */ u8 flags;     /**< bit0 stop/start fade (func_800A2054); bit1 offset-params, bit2 center (func_800A1D68). */
-    /* 0x01 */ u8 field2F;   /**< Value written to each SFX entry's field 0x2F. */
-    /* 0x02 */ u8 pitch;     /**< Pitch value. */
+    /* 0x00 */ u8 flags;     /**< DIALOG_CONFIG_* bits. */
+    /* 0x01 */ u8 field2F;   /**< Written to each dialog's cornerIcon. */
+    /* 0x02 */ u8 textSpeed; /**< Text speed (setDialogTextSpeed). */
     /* 0x03 */ u8 fadeTimer; /**< Frame countdown; on reaching 0 the entry is faded out (see func_800A1C6C). */
     /* 0x04 */ RECT rect;    /**< Message-box rect (func_800A1D68); 0 w/h means "size to the text". */
-} SfxConfig;
+} DialogConfig;
 
 /** @brief The Triple Triad board view + cursor state at D_801D49C8.
  *
@@ -127,7 +127,7 @@ typedef struct {
     /* 0x24 */ u8 unk24;
 } CursorState;
 
-/** @brief getGlyphWidthA's packed {width, height} result, held in an 8-byte stack slot. */
+/** @brief getTextSize's packed {width, height} result, held in an 8-byte stack slot. */
 typedef union {
     s32 raw[2];   /**< raw[0] = the packed result word; the pair sizes the 8-byte slot. */
     s16 wh[2];    /**< wh[0] = width, wh[1] = height (overlay of raw[0]). */
@@ -153,52 +153,39 @@ typedef struct {
 
 /** @brief Render context for @c func_800A4250 (fields named by offset — role inferred). */
 typedef struct {
-    /* 0x00 */ s16 unk00;     /**< Forwarded (−0x13) as @c func_8002FF34's @c yPos. */
+    /* 0x00 */ s16 unk00;     /**< Forwarded (−0x13) as @c drawIcon's @c x. */
     /* 0x02 */ s16 unk02;     /**< Base for the @c w arg (+0xB, then +column*13). */
     /* 0x04 */ u8  pad04[0xC];
-    /* 0x10 */ s32 unk10;     /**< Forwarded as @c func_8002FF34's @c col. */
+    /* 0x10 */ s32 unk10;     /**< Forwarded as @c drawIcon's @c color. */
 } func_800A4250_arg2;
 
 /* ───────────────────── be_object4-internal externs ───────────────────── */
 
 /* Imported functions kept as externs here, each for a concrete reason (numstr, controller-
    input, battle-display and colour-bar GPU helpers were migrated to numstr.h / thread.h /
-   btl_anim.h / drawbar.h):
-     - sendSpuCommand, func_800300F8 — owned by btl_color.c, whose btl_color.h pulls in battle.h
-       (for BattleCmdEntry); tripletriad is decoupled from battle.h, and this header does not
-       include battle.h.
-     - func_800281A4, func_800485C4, func_80030F10 — no .c in the tree defines them yet, so there
-       is no owner translation unit to give a header.
-     - getAnimFrameParam — returns u16 (thread.c) but this caller needs the s32 view with no
+   btl_anim.h / ui/window.h):
+     - getPadReadButtons — returns u16 (thread.c) but this caller needs the s32 view with no
        widening mask; adopting the true u16 measurably breaks the match (see thread.h). */
-extern void sendSpuCommand(s32 idx);
-extern void func_800485C4(void *dst, void *src, s32 size);
-extern void func_800281A4(s32 entity, s32 side, s32 value);
-extern void *func_800300F8(void *renderCtx, void *prim, s32 glyph, s32 x, s32 y, s32 color, s32 blink);
-extern s32  getAnimFrameParam(s32 slot, s32 sub);     /**< Per-controller input-frame param. Defined u16 in thread.c, but the original caller uses it as s32 (no widening mask) — match-load-bearing, so kept here rather than via thread.h. */
-extern s32  func_80030F10(s32 arg);                   /**< Read a controller's button mask (owner TU not yet identified). */
+extern s32  getPadReadButtons(s32 slot, s32 sub);     /**< Per-controller held buttons. Defined u16 in thread.c, but the original caller uses it as s32 (no widening mask) — match-load-bearing, so kept here rather than via thread.h. */
 
 /* File-scope data: a few globals owned elsewhere (battle config / menu palette) plus
    be_object4-private board / SFX / input state — the D_801D4xxx / D_801C2Exx / D_80182Exx
    symbols are not referenced by any other translation unit. */
-extern u8  g_battleConfig[];   /**< Shared battle config; [9] bit 0 = sound-bank selector. */
-extern u8  D_80082C11;         /**< Sound-bank selector flag (same byte as g_battleConfig[9]). */
 extern s16 D_8005F11C;
-extern s32 g_menuColor[];
 extern u8  D_801A1B88[];       /**< Start of the Triple Triad sound region uploaded to a bank. */
 extern s16 D_801D49E2;
 extern s16 D_801D49F8[];
 extern u16 D_801D4B18;
 extern u16 D_801D4B1A;
-extern u16 D_801D4AF8[2][4]; /**< Per-(entity,side) previous edge flags (see func_800A29D4). */
-extern s16 D_801D4B08[2][4]; /**< Per-(entity,side) edge countdown timer (see func_800A29D4). */
+extern u16 D_801D4AF8[2][4]; /**< Per-(port,side) previous edge flags (see func_800A29D4). */
+extern s16 D_801D4B08[2][4]; /**< Per-(port,side) edge countdown timer (see func_800A29D4). */
 extern s32 D_801D4B20[]; /**< Per-controller current held-button mask. */
 extern s32 D_801D4B28[]; /**< Per-controller auto-repeat mask. */
 extern s32 D_801D4B30[]; /**< Per-controller newly-pressed mask. */
 extern s32 D_801D4B24;   /**< = D_801D4B20[1] (player 2); split symbol for the readPads write. */
 extern s32 D_801D4B2C;   /**< = D_801D4B28[1] (player 2). */
 extern s32 D_801D4B34;   /**< = D_801D4B30[1] (player 2). */
-extern SfxConfig D_80182E70[];
+extern DialogConfig D_80182E70[];
 extern u8 D_80182EC8[];
 extern u8 D_801D4568[];
 extern u8 D_801D4968[];
@@ -215,7 +202,7 @@ extern void *func_800A3EE0(void *a0, void *a1, s32 a2, s32 a3, s32 a4, s32 a5); 
 extern void *func_800A3D2C(void *otBase, void *pkt, s32 x, s32 y, s32 cardImg, s32 col); /**< Card-image primitive. */
 extern void *func_800A3528(void *otBase, void *pkt, void *(*drawCell)(void *, void *, s32, s32, s32)); /**< Per-cell slide-render iterator. */
 extern s32 func_800A238C();
-extern s32 func_800A29D4(BattleAnimState *base, BattleAnimEntity *elem, u16 arg1, s32 side, s32 entryIndex);
+extern s32 func_800A29D4(EngineState *base, PadPort *port, u16 arg1, s32 side, s32 entryIndex);
 extern s32 func_800A390C(s32 flags0, s32 flags1); /**< Cursor/timer state machine. */
 extern s32 func_800A443C(s32 a0);                 /**< VSync-locked display-list apply. */
 extern void func_800A4504(s32 a0, s32 a1); /**< SFX (60, 32) init. */

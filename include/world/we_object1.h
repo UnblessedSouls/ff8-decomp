@@ -103,19 +103,8 @@ extern POLY_FT4  D_800C8648[2]; /* double-buffered worldmap quad primitive */
 
 extern void func_8009C528(s32 rc);
 extern void func_8009FEDC(u8 *work, u8 type);
-extern s32  func_80042634(s32 a);
 extern void func_800A5D10(void);
-extern s32  getCurrentFieldMusic(void); /* defined u16 in btl_sfx; used full-width here */
-extern void setSfxPitch(s32 idx, s32 val);
-extern void setSfxEntityType(s32 idx, s32 val);
-extern void setSfxReverbMode(s32 idx, s32 val);
-extern void setSfxGlobalFlag(s32 val);
-extern void startSfxSlow(s32 idx);
-extern void func_8002D784(s32 sfxIdx, u8 *data, s32 paramY, s32 paramZ, s32 paramW, s32 paramV);
-extern void func_8002E064(s32 index, RECT *srcRect);
-extern s32  func_8002E680(u8 *text);
-extern void fadeOutSfxSlow(s32 idx);
-extern void initSfxPlayback(s32 index, u8 *data);
+extern s32 getFieldTextSpeed(void); /* defined u16 in gamestate.c; read full-width here */
 extern s32  sndProcessAudio(s32 a, s32 b);
 extern s32  sndGetStatus(void);
 extern s32  getScrollState(s32 key, u8 *p18, s32 *p1C, s32 *p20, s32 *p24, s32 *p28);
@@ -123,7 +112,6 @@ extern void func_80039678(s32 a, s32 b, s32 c);
 extern void func_8009CDC4(s32 a, s32 b);
 extern void func_8009CE40(void);
 extern s32  func_8009D7D8(s32 a);
-extern void func_8003FD84(MATRIX *xform, VECTOR *in, VECTOR *out);
 extern void func_8009C478(s32 *src, s32 x, s32 y);
 extern CmdDesc *glyphAt(GlyphQuery *v, AngleSlot *out);
 extern s32 func_800BEC1C(s32 kind);
@@ -133,7 +121,6 @@ extern void sndCmdF1(void);
 extern void sndSetChannelVolume(s32 channel, s32 vol);
 extern void sndSeqStartPan(s32 a0, s32 a1, s32 a2, s32 a3);
 extern void sndSeqPlayPan7bit(s32 a0, s32 a1, s32 a2, s32 a3);
-extern void func_8004D604(POLY_FT4 *prim, s32 frame);
 
 extern s32  func_800997E8(u16 *out);
 extern void func_80099F78(void);

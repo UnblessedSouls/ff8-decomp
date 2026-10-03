@@ -8,13 +8,17 @@
 #include "psxsdk/libetc.h"
 #include "psxsdk/libcd.h"
 
+/* s32 view of thread.c's u16 getPadReadButtons; see thread.h. */
+extern s32 getPadReadButtons(s32 slot, s32 sub);
+
 /**
  * @brief Display-init overlay entry point — set up display + run 60-frame intro.
  *
  * Boot-time setup for the intro sequence (Square publisher attribution / opening movie
  * preface) before the main menu. Steps:
- *  - Ring the sound side (@c sndCmdF0/F1) and wait for the sound CPU to
- *    drain its pending command queue (@c func_8004D174 / @c func_8004D208).
+ *  - Ring the sound side (@c sndCmdF0/F1), stop any GPU drawing in progress
+ *    (@c BreakDraw, retried every VSync while it cannot) and, if a list was
+ *    being drawn, wait for the GPU to go idle (@c IsIdleGPU).
  *  - Disable the display, sync the CD module to a known idle state, and
  *    issue @c CdControlB(0xE, ...) — CD command 0xE is @c CdlSetmode with
  *    param @c 0x80 (auto-pause + double-speed reporting).
@@ -27,17 +31,17 @@
  */
 void initIntroOverlay(void) {
     RECT clearRect;
-    s32 status;
+    u32 *status;
     s32 i;
 
     sndCmdF0();
     sndCmdF1();
 
-    while ((status = func_8004D174()) == -1) {
+    while ((status = BreakDraw()) == (u32 *)-1) {
         VSync(0);
     }
-    if (status != 0) {
-        while (func_8004D208(1) != 0) {}
+    if (status != NULL) {
+        while (IsIdleGPU(1) != 0) {}
     }
 
     SetDispMask(0);
@@ -86,7 +90,7 @@ void initIntroOverlay(void) {
  *  - Submit the current buffer's OT via @c DrawOTag, flip @c currBuf,
  *    install the next frame's @c DRAWENV / @c DISPENV pair, and clear
  *    the newly-active OT for the next pass.
- *  - Sample the controllers (@c getAnimFrameParam slots 0 and 1) and
+ *  - Sample the controllers (@c getPadReadButtons slots 0 and 1) and
  *    update the edge-detect mirrors at @c g_introCtrl0Edge (slot 0 rising
  *    edges) and @c g_introCtrl1Edge (slot 1 rising edges) using the
  *    @c g_introCtrl0Inv / @c g_introCtrl1Inv complements latched last frame.
@@ -120,8 +124,8 @@ void func_8009818C(void) {
     ClearOTagR(&g_introDispCtx.ot[g_introDispCtx.currBuf], 1);
 
     func_800275D4();
-    g_introCtrl0 = getAnimFrameParam(0, 0);
-    g_introCtrl1 = getAnimFrameParam(1, 0);
+    g_introCtrl0 = getPadReadButtons(0, 0);
+    g_introCtrl1 = getPadReadButtons(1, 0);
 
     g_introCtrl0Edge = g_introCtrl0Inv & g_introCtrl0;
     g_introCtrl1Edge = g_introCtrl1Inv & g_introCtrl1;

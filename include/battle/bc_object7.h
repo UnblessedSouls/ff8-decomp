@@ -13,7 +13,7 @@ extern void func_800AFFF4(void);
 extern void func_800B0014(void);
 extern void func_800B0034(void);
 extern void func_800B0054(void);
-extern s32 func_800B0074(s32 idx);
+extern BattleEntityData* func_800B0074(s32 idx);
 extern void func_800B00A8(void);
 extern void func_800B00C8(void);
 extern u8 *func_800B0248(u8* a0, u8 a1, u8* a2);
@@ -24,7 +24,7 @@ extern s32 func_800B0668(s32 a0, s32 a1);
 extern void func_800B06DC(u16 arg0);
 extern void func_800B0754(s32 a0, s32 a1, s32 a2, u16 a3);
 extern void func_800B0C08(void);
-extern u16 func_800B0F7C(s32 arg0);
+extern s32 func_800B0F7C(s32 arg0);
 extern u16 func_800B1104(s32 a0);
 
 #endif /* BATTLE_BC_OBJECT7_H */

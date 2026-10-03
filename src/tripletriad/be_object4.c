@@ -1,15 +1,20 @@
 #include "common.h"
 #include "gamestate.h"
+#include "field.h"
 #include "item.h"
 #include "numstr.h"
 #include "sound.h"
 #include "snd_init.h"
+#include "snd_sfx.h"
 #include "thread.h"
 #include "psxsdk/libc.h"
 #include "psxsdk/libgpu.h"
-#include "drawbar.h"
+#include "battle.h"
+#include "ui/window.h"
 #include "battle_anim.h"
+#include "menu_tint.h"
 #include "btl_anim.h"
+#include "ui/icon.h"
 #include "tripletriad/be_object1.h"
 #include "tripletriad/be_object1b.h"
 #include "tripletriad/be_object2.h"
@@ -17,25 +22,36 @@
 #include "tripletriad/be_object3b.h"
 #include "tripletriad/be_object4.h"
 
+/** @brief @c DialogConfig.flags: open and close the dialog without the animation. */
+#define DIALOG_CONFIG_INSTANT 0x01
+/** @brief @c DialogConfig.flags: center the text in the box. */
+#define DIALOG_CONFIG_CENTER_TEXT 0x02
+/** @brief @c DialogConfig.flags: the rect's x/y is the box's center, not its corner. */
+#define DIALOG_CONFIG_CENTER_BOX 0x04
+
+/* s32 view: input/button_remap.h's u16 (u16) makes the caller mask the argument and result. */
+// TODO: Drop this and include the prototype from the owner.
+extern s32 applyButtonRemapTranslation(s32 arg);
+
 /**
- * @brief Reset and reconfigure the seven SFX channels.
+ * @brief Reset and configure the seven dialogs.
  *
- * Resets all sound effects, runs a (60, 32) init via @c func_800A4504, then for
- * each of the seven channels applies the per-channel settings from the
- * @c D_80182E70 config table: reverb mode = channel index, field 0x2F and pitch
- * from the table entry, and zeroed entry params.
+ * Resets all dialogs, runs a (60, 32) init via @c func_800A4504, then for
+ * each of the seven dialogs applies its settings from the
+ * @c D_80182E70 config table: anim speed = dialog index, corner icon and text
+ * speed from the table entry, and a zeroed text origin.
  */
 void func_800A1BE0(void)
 {
     s32 i;
 
-    resetAllSfx();
+    resetAllDialogs();
     func_800A4504(0x3C, 0x20);
     for (i = 0; i < 7; i++) {
-        setSfxReverbMode(i, i);
-        setSfxField2F(i, D_80182E70[i].field2F);
-        setSfxPitch(i, D_80182E70[i].pitch);
-        setSfxEntryParams(i, 0, 0);
+        setDialogAnimSpeed(i, i);
+        setDialogCornerIcon(i, D_80182E70[i].field2F);
+        setDialogTextSpeed(i, D_80182E70[i].textSpeed);
+        setDialogTextOrigin(i, 0, 0);
     }
 }
 
@@ -46,8 +62,9 @@ void func_800A1BE0(void)
  * cursor state machine with the current input snapshots and records the
  * resulting card-display slot; otherwise idles the state machine and clears the
  * slot. Then refreshes the display, renders the battle ordering table, and
- * counts down each SFX entry's fade timer — firing a fast or slow fade-out (per
- * the entry's flag bit 0) on the frame a timer reaches zero.
+ * counts down each dialog's @c fadeTimer — closing the dialog at once or with its
+ * animation (per the entry's @ref DIALOG_CONFIG_INSTANT) on the frame the timer
+ * reaches zero.
  */
 void func_800A1C6C(void)
 {
@@ -68,10 +85,10 @@ void func_800A1C6C(void)
         if (D_80182E70[i].fadeTimer != 0) {
             D_80182E70[i].fadeTimer--;
             if (D_80182E70[i].fadeTimer == 0) {
-                if (D_80182E70[i].flags & 1) {
-                    fadeOutSfxFast(i);
+                if (D_80182E70[i].flags & DIALOG_CONFIG_INSTANT) {
+                    closeDialogInstant(i);
                 } else {
-                    fadeOutSfxSlow(i);
+                    closeDialogAnimated(i);
                 }
             }
         }
@@ -79,30 +96,31 @@ void func_800A1C6C(void)
 }
 
 /**
- * @brief Lay out a Triple Triad message-banner box and trigger its SFX/animation.
+ * @brief Lay out a Triple Triad message-banner box and open its dialog.
  *
  * Measures @p str (and, for @p id 5, the appended "Play / Quit" suffix) to size the
  * box, copies the box rect from @c D_80182E70[id], applies defaults ("size to text"
- * when w/h are 0), then either centers it (flag bit 2) or pulls it in from the
- * right/bottom edge for negative origins.  Registers the rect (func_8002E064),
- * dispatches the banner's audio by @p id (5 = multi-line, 6 = fixed, otherwise the
- * generic path), optionally offsets the SFX entry (flag bit 1), starts it
- * normal/slow (flag bit 0), and records @p param as the entry's fade timer.
+ * when w/h are 0), then either centers it (@ref DIALOG_CONFIG_CENTER_BOX) or pulls
+ * it in from the right/bottom edge for negative origins.  Registers the rect
+ * (setDialogRect), sets the message by @p id (5 and 6 with choices, otherwise
+ * plain), optionally centers the text in the box (@ref DIALOG_CONFIG_CENTER_TEXT),
+ * opens it at once or animated (@ref DIALOG_CONFIG_INSTANT), and records @p param
+ * as the entry's fade timer.
  *
- * @param id    Message/SFX slot index into @c D_80182E70.
- * @param str   FF8-encoded message string.
+ * @param id Dialog index into @c D_80182E70.
+ * @param str FF8-encoded message string.
  * @param param Fade-timer / display-duration value stored into the entry.
  */
 void func_800A1D68(s32 id, u8 *str, s32 param) {
-    GlyphSize dim;   /* text block size from getGlyphWidthA */
-    GlyphSize sfx;   /* "Play / Quit" suffix size (id 5 only) */
+    GlyphSize dim; /* text block size from getTextSize */
+    GlyphSize sfx; /* "Play / Quit" suffix size (id 5 only) */
     RECT rect;
 
-    dim.raw[0] = getGlyphWidthA(str);
+    dim.raw[0] = getTextSize(str);
 
     if (id == 5) {
         s16 m;
-        sfx.raw[0] = getGlyphWidthA((u8 *)&D_801826E2 - 0x62 + D_801826E2);
+        sfx.raw[0] = getTextSize((u8 *)&D_801826E2 - 0x62 + D_801826E2);
         m = (u16)sfx.wh[0] + 0x20;
         sfx.wh[0] = m;
         if (dim.wh[0] < m) {
@@ -117,7 +135,7 @@ void func_800A1D68(s32 id, u8 *str, s32 param) {
     if (rect.h == 0) {
         rect.h = (u16)dim.wh[1] + 0x10;
     }
-    if (D_80182E70[id].flags & 4) {
+    if (D_80182E70[id].flags & DIALOG_CONFIG_CENTER_BOX) {
         rect.x = (u16)rect.x - rect.w / 2;
         rect.y = (u16)rect.y - rect.h / 2;
     } else {
@@ -128,84 +146,78 @@ void func_800A1D68(s32 id, u8 *str, s32 param) {
             rect.y = (u16)rect.y + 0xE0 - rect.h;
         }
     }
-    func_8002E064(id, &rect);
+    setDialogRect(id, &rect);
 
     if (id == 5) {
-        goto sfx5;
+        goto dialog5;
     }
     if (id != 6) {
-        goto sfxDefault;
+        goto dialogDefault;
     }
-    func_8002D784(6, str, 1, 2, 1, 2);
-    setSfxGlobalFlag(6);
-    goto sfxDone;
-sfx5:
+    setDialogChoiceMessage(6, str, 1, 2, 1, 2);
+    setFocusedDialog(6);
+    goto dialogDone;
+dialog5:
     {
         s32 lines = dim.wh[1] / 16;
-        func_8002D784(5, str, lines - 1, lines, lines - 1, lines);
+        setDialogChoiceMessage(5, str, lines - 1, lines, lines - 1, lines);
     }
-    setSfxGlobalFlag(5);
-    goto sfxDone;
-sfxDefault:
-    initSfxPlayback(id, str);
-sfxDone:;
+    setFocusedDialog(5);
+    goto dialogDone;
+dialogDefault:
+    setDialogMessage(id, str);
+dialogDone:;
 
-    if (D_80182E70[id].flags & 2) {
+    if (D_80182E70[id].flags & DIALOG_CONFIG_CENTER_TEXT) {
         s32 px = rect.w - 0x10;
         s32 py = rect.h - 0x10;
-        setSfxEntryParams(id, (px - dim.wh[0]) / 2, (py - dim.wh[1]) / 2);
+        setDialogTextOrigin(id, (px - dim.wh[0]) / 2, (py - dim.wh[1]) / 2);
     }
-    if (D_80182E70[id].flags & 1) {
-        startSfxNormal(id);
+    if (D_80182E70[id].flags & DIALOG_CONFIG_INSTANT) {
+        openDialogInstant(id);
     } else {
-        startSfxSlow(id);
+        openDialogAnimated(id);
     }
 
     D_80182E70[id].fadeTimer = param;
 }
 
 /**
- * @brief Start or stop an SFX entry based on its type flag.
+ * @brief Close a dialog, at once or with its animation per its
+ * @ref DIALOG_CONFIG_INSTANT flag.
  *
- * Looks up the entry at D_80182E70[a0 * 12], checks bit 0 of byte 0.
- * If set, calls fadeOutSfxFast (stop). Otherwise calls fadeOutSfxSlow (start).
- *
- * @param a0 Object index.
+ * @param id Dialog index into @c D_80182E70.
  */
-void func_800A2054(s32 a0) {
-    u8 *base = (u8 *)D_80182E70;
-    u8 *entry;
-
-    entry = base + a0 * 12;
-    if (entry[0] & 1) {
-        fadeOutSfxFast();
+void func_800A2054(s32 id) {
+    if (D_80182E70[id].flags & DIALOG_CONFIG_INSTANT) {
+        closeDialogInstant(id);
     } else {
-        fadeOutSfxSlow();
+        closeDialogAnimated(id);
     }
 }
 
 /**
- * @brief Reset all 7 SFX entries and finalize.
+ * @brief Close all 7 dialogs at once and finalize.
  *
- * Calls fadeOutSfxFast for each of the 7 objects (indices 0-6),
+ * Calls closeDialogInstant for each of dialogs 0-6,
  * then calls func_800A44BC to set D_801D49E2.
  */
 void func_800A20B0(void) {
     s32 i = 0;
     do {
-        fadeOutSfxFast(i);
+        closeDialogInstant(i);
         i++;
     } while (i < 7);
     func_800A44BC();
 }
 
 /**
- * @brief Poll a player-input gate; thin wrapper forwarding @p gate to func_8002CE84.
+ * @brief Poll a player-input gate; thin wrapper forwarding @p gate to getDialogChoice.
  * @param gate Gate / channel id to poll.
  * @return Gate result: <0 while still waiting, otherwise the player's selection.
  */
 s32 func_800A20F4(s32 gate) {
-    return func_8002CE84(gate);
+    return getDialogChoice(gate);
 }
 
 /**
@@ -227,26 +239,26 @@ void showCardDetail(s32 cardId) {
         g_cardDetailMsg[0] = 6;
         g_cardDetailMsg[1] = 0x22;
         strcpy((char *)&g_cardDetailMsg[2], func_80023A54(cardId));
-        func_80047C74(g_cardDetailMsg, g_cardDetailSuffix);
+        strcat(g_cardDetailMsg, g_cardDetailSuffix);
         func_800A1D68(0, g_cardDetailMsg, 1);
     } else {
         g_cardDetailMsg[0] = 6;
         g_cardDetailMsg[1] = 0x25;
         strcpy((char *)&g_cardDetailMsg[2], func_80023A54(cardId));
-        func_80047C74(g_cardDetailMsg, g_cardDetailSuffix);
+        strcat(g_cardDetailMsg, g_cardDetailSuffix);
         func_800A1D68(0, g_cardDetailMsg, 1);
     }
 }
 
 /**
- * @brief Clear all 7 SFX entries by calling setSfxEntryParams with zero params.
+ * @brief Clear all 7 dialogs' params by calling setDialogTextOrigin with zeros.
  *
- * Iterates indices 0-6, calling setSfxEntryParams(i, 0, 0) for each.
+ * Iterates indices 0-6, calling setDialogTextOrigin(i, 0, 0) for each.
  */
-void clearAllSfx(void) {
+void clearAllDialogs(void) {
     s32 i = 0;
     do {
-        setSfxEntryParams(i, 0, 0);
+        setDialogTextOrigin(i, 0, 0);
         i++;
     } while (i < 7);
 }
@@ -328,7 +340,7 @@ void playTriadSfxParam(s32 sfxId, s32 param) {
  *       @c sndCmd11(0) and advance to state 1.
  *  - 1: copy the Triple Triad sound region @c [D_801A1B88, g_tripleTriadActiveList)
  *       into the inactive bank buffer (@c D_8005F388 / @c D_80063388, chosen by
- *       @c D_80082C11), flip the bank selector @c g_battleConfig[9], then play the
+ *       @c D_80082C11), flip the bank selector @c g_battleConfig.unk9, then play the
  *       uploaded bank via @c sndCmd10 / @c sndCmdC0.
  *
  * @param node Task node.
@@ -352,8 +364,8 @@ s32 func_800A238C(SndTaskNode *node) {
         } else {
             buf = D_80063388;
         }
-        g_battleConfig[9] ^= 1;
-        func_800485C4(buf, D_801A1B88, (s32)&g_tripleTriadActiveList - (s32)D_801A1B88);
+        g_battleConfig.unk9 ^= 1;
+        memmove(buf, D_801A1B88, (s32)&g_tripleTriadActiveList - (s32)D_801A1B88);
         sample = sndCmd10((s32)buf);
         D_8005F11C = sample;
         sndCmdC0(sample, 0x7F);
@@ -402,45 +414,45 @@ void func_800A24B4(u8 *dst) {
     s32 flag;
 
     dst[0] = 0;
-    func_80047C74(dst, (u8 *)tbl + D_8018269E);                  /* "Rules" */
+    strcat(dst, (u8 *)tbl + D_8018269E);                  /* "Rules" */
 
     if (g_tripleTriadRules & TT_RULE_OPEN) {
-        func_80047C74(dst, (u8 *)tbl + tbl->openStr);            /* ": Open" */
+        strcat(dst, (u8 *)tbl + tbl->openStr);            /* ": Open" */
     }
     if (g_tripleTriadRules & TT_RULE_SUDDEN_DEATH) {
-        func_80047C74(dst, (u8 *)tbl + tbl->suddenDeathStr);     /* ": Sudden Death" */
+        strcat(dst, (u8 *)tbl + tbl->suddenDeathStr);     /* ": Sudden Death" */
     }
     if (g_tripleTriadRules & TT_RULE_RANDOM) {
-        func_80047C74(dst, (u8 *)tbl + tbl->randomStr);          /* ": Random" */
+        strcat(dst, (u8 *)tbl + tbl->randomStr);          /* ": Random" */
     }
     if (g_tripleTriadRules & (TT_RULE_SAME | TT_RULE_PLUS)) {
         flag = 0;
-        func_80047C74(dst, (u8 *)tbl + tbl->sameOrPlus0);        /* clause lead-in */
-        func_80047C74(dst, (u8 *)tbl + tbl->sameOrPlus1);        /* ": " */
+        strcat(dst, (u8 *)tbl + tbl->sameOrPlus0);        /* clause lead-in */
+        strcat(dst, (u8 *)tbl + tbl->sameOrPlus1);        /* ": " */
         if (g_tripleTriadRules & TT_RULE_SAME) {
-            func_80047C74(dst, (u8 *)tbl + tbl->sameStr);        /* "Same" */
+            strcat(dst, (u8 *)tbl + tbl->sameStr);        /* "Same" */
             flag = 1;
         }
         if (g_tripleTriadRules & TT_RULE_PLUS) {
             if (flag) {
-                func_80047C74(dst, (u8 *)tbl + tbl->plusConj);   /* "," */
+                strcat(dst, (u8 *)tbl + tbl->plusConj);   /* "," */
             }
-            func_80047C74(dst, (u8 *)tbl + tbl->plusStr);        /* "Plus" */
+            strcat(dst, (u8 *)tbl + tbl->plusStr);        /* "Plus" */
             flag = 1;
         }
         if ((g_tripleTriadRules & (TT_RULE_SAME | TT_RULE_SAME_WALL)) == (TT_RULE_SAME | TT_RULE_SAME_WALL)) {
             if (flag) {
-                func_80047C74(dst, (u8 *)&D_801826A6 - 0x26 + D_801826A6);   /* "," */
+                strcat(dst, (u8 *)&D_801826A6 - 0x26 + D_801826A6);   /* "," */
             }
-            func_80047C74(dst, (u8 *)&D_801826C2 - 0x42 + D_801826C2);       /* "Same Wall" */
+            strcat(dst, (u8 *)&D_801826C2 - 0x42 + D_801826C2);       /* "Same Wall" */
         }
     }
     if (g_tripleTriadRules & TT_RULE_ELEMENTAL) {
-        func_80047C74(dst, (u8 *)&D_801826C6 - 0x46 + D_801826C6);           /* ": Elemental" */
+        strcat(dst, (u8 *)&D_801826C6 - 0x46 + D_801826C6);           /* ": Elemental" */
     }
-    func_80047C74(dst, (u8 *)&D_801826CA - 0x4A + D_801826CA);               /* ": Trade Rule" */
+    strcat(dst, (u8 *)&D_801826CA - 0x4A + D_801826CA);               /* ": Trade Rule" */
     /* active trade-rule name (Null/One/Diff/Direct/All), indexed by D_801A2C44 */
-    func_80047C74(dst, (u8 *)&D_801826CA - 0x4A + *(u16 *)((u8 *)&D_801826CA + D_801A2C44 * 4 + 4));
+    strcat(dst, (u8 *)&D_801826CA - 0x4A + *(u16 *)((u8 *)&D_801826CA + D_801A2C44 * 4 + 4));
 }
 
 /**
@@ -471,14 +483,14 @@ void closeMenu(void) {
  * @brief Add a rendering command entry based on the alternate screen index.
  *
  * Reads g_drawBufferIndex, XORs with 1 to get the alternate index, computes
- * an offset of index * 92 into g_drawEnvs, and calls queueLoadImage
+ * an offset of index * 92 into g_ttDrawEnvs, and calls queueLoadImage
  * with the resulting pointer and D_8012E66C.
  *
  * @return Always 0.
  */
 s32 func_800A274C(void) {
     s32 idx = g_drawBufferIndex ^ 1;
-    queueLoadImage(&g_drawEnvs[idx].clip, D_8012E66C);
+    queueLoadImage(&g_ttDrawEnvs[idx].clip, D_8012E66C);
     return 0;
 }
 
@@ -495,7 +507,7 @@ enum PlayQuitPhase {
  * Three-phase state machine (@ref PlayQuitPhase) clocked once per frame off @c node->state:
  *  - @ref PLAYQUIT_SHOW: on entry start a fade-to-black; after @c TT_HOLD_FRAMES_FADE frames
  *    build the rules description plus its "Play / Quit" suffix into @c D_801D4568 (func_800A24B4
- *    then func_80047C74), show it (func_800A1D68), and advance to @ref PLAYQUIT_POLL.
+ *    then strcat), show it (func_800A1D68), and advance to @ref PLAYQUIT_POLL.
  *  - @ref PLAYQUIT_POLL: bump the Triple Triad RNG-seed field, then poll the player-input gate
  *    (func_800A20F4). A negative result keeps waiting; otherwise acknowledge it (func_800A2054)
  *    and act on the choice: "play again" (0) re-enters @c TT_STATE_SCRIPT, "quit" (1) advances
@@ -523,7 +535,7 @@ s32 updatePlayQuitPrompt(PromptScreenNode *node) {
                 func_800A24B4(D_801D4568);
                 /* Suffix string pointer = rule-string block base + offset; the block base is
                    recovered from the carved offset symbol (&D_801826E2 - 0x62 == 0x80182680). */
-                func_80047C74(D_801D4568, (u8 *)&D_801826E2 - 0x62 + D_801826E2);
+                strcat(D_801D4568, (u8 *)&D_801826E2 - 0x62 + D_801826E2);
                 func_800A1D68(5, D_801D4568, 0);
                 node->state = PLAYQUIT_POLL;
                 node->counter = 0;
@@ -584,15 +596,15 @@ u8 *initTripleTriadRenderList(void) {
 
 /**
  * @brief Per-(slot, side) input-edge debounce with keyboard-style auto-repeat,
- *        for one of the four edges of a Triple Triad battle-anim entity.
+ * for one of the four channels of a pad port.
  *
  * Maintains, per card slot @p entry and side @p side (0..3), a small auto-repeat
  * state machine over a bitmask of edge events:
  *  - Reads last frame's masked bits from @ref D_801D4AF8 [entry][side] and stores
  *    @p newVal there.
  *  - Masks both new and previous bitmasks by the side's relevance mask
- *    (`elem->unk10[side]`): @c result = new active bits, @c prevMasked = old.
- *  - @c base->defaultColor packs the timing: low byte = initial/restart delay,
+ *    (`port->unk10[side]`): @c result = new active bits, @c prevMasked = old.
+ *  - @c base->repeatDelays packs the timing: low byte = initial/restart delay,
  *    high byte = repeat interval.
  *  - If the masked new and old bits overlap (a sustained event), ticks the
  *    countdown in @ref D_801D4B08 [entry][side] (reloading the restart delay when
@@ -603,16 +615,16 @@ u8 *initTripleTriadRenderList(void) {
  * Drives keyboard-style auto-repeat for whatever per-side cue the bits represent.
  * Called four times (once per side) by @ref func_800A2A8C, which ORs the results.
  *
- * @param base   Battle-anim state; base->defaultColor packs the two delays.
- * @param elem   Battle-anim entity; elem->unk10[side] is the per-side mask.
+ * @param base Engine state; base->repeatDelays packs the two delays.
+ * @param port Pad port; port->unk10[side] is the per-side mask.
  * @param newVal Raw new edge bitmask for this frame.
- * @param side   Card side index, 0..3.
- * @param entry  Card slot index.
+ * @param side Card side index, 0..3.
+ * @param entry Card slot index.
  * @return The masked event bits that should fire this frame, or 0 while suppressed.
  *
  * @note Purpose inferred. Decomp scratch: https://decomp.me/scratch/7L33D
  */
-s32 func_800A29D4(BattleAnimState *base, BattleAnimEntity *elem, u16 newVal, s32 side, s32 entry)
+s32 func_800A29D4(EngineState *base, PadPort *port, u16 newVal, s32 side, s32 entry)
 {
     s32 repeatTimer;
     s32 restartDelay;
@@ -622,9 +634,9 @@ s32 func_800A29D4(BattleAnimState *base, BattleAnimEntity *elem, u16 newVal, s32
 
     prevMasked = D_801D4AF8[entry][side];
     D_801D4AF8[entry][side] = newVal;
-    restartDelay = *(u16 *)&base->defaultColor;
+    restartDelay = base->repeatDelays.hword;
     repeatTimer = D_801D4B08[entry][side];
-    mask = elem->unk10[side];
+    mask = port->unk10[side];
 
     repeatInterval = restartDelay >> 8;
     restartDelay &= 0xFF;
@@ -648,28 +660,25 @@ s32 func_800A29D4(BattleAnimState *base, BattleAnimEntity *elem, u16 newVal, s32
 }
 
 /**
- * @brief Evaluate all four edges of battle-anim entity @p entryIndex against its neighbour.
+ * @brief Auto-repeat the four channels of pad @p entryIndex's bits.
  *
- * Follows the entity's @c linkedIdx to its linked neighbour, then evaluates each
- * of the four edges (0..3) via @c func_800A29D4, OR-ing the per-edge results into
- * a single 16-bit mask. The Triple Triad board reuses the battle-animation
- * entities (@c g_battleAnims) to drive its card animations.
+ * Triple Triad's copy of autoRepeatPad: runs func_800A29D4 on @p arg1 for channels
+ * 0-3 against the port linked to port @p entryIndex, and ORs the bits that fire.
  *
- * @param entryIndex Index of the entity in @c g_battleAnims to evaluate.
- * @param arg1       Per-edge value forwarded to @c func_800A29D4.
- * @return Combined 16-bit result mask from the four edge evaluations. Typed @c s32
- *         (not @c u16) because @c readPads re-masks the value, which requires the
- *         caller to not assume it is already 16-bit-clean.
+ * @param entryIndex Pad index, 0 or 1.
+ * @param arg1 Pad bits of this frame.
+ * @return The bits that fire this frame. Typed @c s32 (not @c u16) because @c readPads
+ * re-masks the value, which requires the caller to not assume it is already 16-bit-clean.
  */
 s32 func_800A2A8C(s32 entryIndex, u16 arg1)
 {
-    BattleAnimEntity *link = &g_battleAnims.entities[g_battleAnims.entities[entryIndex].linkedIdx];
+    PadPort *port = &g_engine.ports[g_engine.ports[entryIndex].linkedIdx];
     u16 result = 0;
 
-    result |= func_800A29D4(&g_battleAnims, link, arg1, 0, entryIndex);
-    result |= func_800A29D4(&g_battleAnims, link, arg1, 1, entryIndex);
-    result |= func_800A29D4(&g_battleAnims, link, arg1, 2, entryIndex);
-    result |= func_800A29D4(&g_battleAnims, link, arg1, 3, entryIndex);
+    result |= func_800A29D4(&g_engine, port, arg1, 0, entryIndex);
+    result |= func_800A29D4(&g_engine, port, arg1, 1, entryIndex);
+    result |= func_800A29D4(&g_engine, port, arg1, 2, entryIndex);
+    result |= func_800A29D4(&g_engine, port, arg1, 3, entryIndex);
 
     return result & 0xFFFF;
 }
@@ -713,7 +722,7 @@ void readPads(void)
 
     func_800275D4();
 
-    padRaw = func_80030F10(getAnimFrameParam(0, 0));
+    padRaw = applyButtonRemapTranslation(getPadReadButtons(0, 0));
     oldPad = D_801D4B20[0];
     held = func_80027DB4(0, PAD_AXIS_X, 0);
     if (!(padRaw & 0xF000) && held >= 0) {
@@ -724,7 +733,7 @@ void readPads(void)
     repeat = func_800A2A8C(0, padRaw & 0xFFFF) & 0xFFFF;
     D_801D4B28[0] = repeat;
 
-    padRaw = func_80030F10(getAnimFrameParam(1, 0));
+    padRaw = applyButtonRemapTranslation(getPadReadButtons(1, 0));
     oldPad = D_801D4B20[1];
     held = func_80027DB4(1, PAD_AXIS_X, 0);
     if (!(padRaw & 0xF000) && held >= 0) {
@@ -737,13 +746,13 @@ void readPads(void)
 }
 
 /**
- * @brief Reset the Triple Triad per-edge animation state for both entities.
+ * @brief Reset the Triple Triad pad state for both ports.
  *
- * Clears the per-(entity, side) bookkeeping tables — previous edge flags
+ * Clears the per-(port, side) bookkeeping tables — previous edge flags
  * (@c D_801D4AF8), edge countdown timers (@c D_801D4B08), and the three
  * @c D_801D4B20 / @c D_801D4B28 / @c D_801D4B30 word tables — for both
- * animation entities, then seeds @c func_800281A4 with the fixed per-side
- * parameters (one set per side 0..3) for each entity.
+ * ports, then seeds @c setPadRepeatMask with the fixed per-side
+ * parameters (one set per side 0..3) for each port.
  */
 void func_800A2D34(void)
 {
@@ -763,14 +772,14 @@ void func_800A2D34(void)
         D_801D4B30[i] = 0;
     }
 
-    func_800281A4(0, 0, 0xFFF);
-    func_800281A4(0, 1, 0x5000);
-    func_800281A4(0, 2, 0xA000);
-    func_800281A4(0, 3, 0x900);
-    func_800281A4(1, 0, 0xFFF);
-    func_800281A4(1, 1, 0x5000);
-    func_800281A4(1, 2, 0xA000);
-    func_800281A4(1, 3, 0x900);
+    setPadRepeatMask(0, 0, 0xFFF);
+    setPadRepeatMask(0, 1, 0x5000);
+    setPadRepeatMask(0, 2, 0xA000);
+    setPadRepeatMask(0, 3, 0x900);
+    setPadRepeatMask(1, 0, 0xFFF);
+    setPadRepeatMask(1, 1, 0x5000);
+    setPadRepeatMask(1, 2, 0xA000);
+    setPadRepeatMask(1, 3, 0x900);
 }
 
 /**
@@ -838,17 +847,17 @@ void func_800A2F78(void) {
 /**
  * @brief Draw the blinking corner markers around the Triple Triad cursor's view rect.
  *
- * Emits up to two glyphs through @c func_800300F8, selected by @p corners:
- * bit 0 draws the left marker (glyph 0x5C) just inside the view's top-left, and
- * bit 1 draws the right marker (glyph 0x5D) just inside the top-right. Both sit
+ * Emits up to two glyphs through @c drawIconClut, selected by @p corners:
+ * bit 0 draws the left marker (@c ICON_ARROW_LEFT) just inside the view's top-left, and
+ * bit 1 draws the right marker (@c ICON_ARROW_RIGHT) just inside the top-right. Both sit
  * near the bottom of the view (@c view.y + view.h - 10). The markers blink in
  * step with @c CursorState::frameCounter: bit 3 of the counter selects a blink
  * parameter of 0 or 0x140, toggling every 8 frames. The running @p prim cursor
  * is threaded through each call and returned.
  *
- * @param renderCtx Render context forwarded to @c func_800300F8.
+ * @param renderCtx Render context forwarded to @c drawIconClut.
  * @param prim      Primitive/cursor threaded through and advanced by each glyph.
- * @param color     Color parameter forwarded to @c func_800300F8.
+ * @param color     Color parameter forwarded to @c drawIconClut.
  * @param corners   Bitmask: bit 0 = left marker, bit 1 = right marker.
  * @return The advanced @p prim cursor.
  */
@@ -865,11 +874,11 @@ void *func_800A2FCC(void *renderCtx, void *prim, s32 color, s32 corners)
 
     if (corners & 1) {
         yc = cs->view.y + cs->view.h - 10;
-        prim = func_800300F8(renderCtx, prim, 0x5C, cs->view.x + 2, yc, color, blink);
+        prim = drawIconClut(renderCtx, prim, ICON_ARROW_LEFT, cs->view.x + 2, yc, color, blink);
     }
     if (corners & 2) {
         yc = cs->view.y + cs->view.h - 10;
-        prim = func_800300F8(renderCtx, prim, 0x5D, (cs->view.x + cs->view.w) - 9, yc, color, blink);
+        prim = drawIconClut(renderCtx, prim, ICON_ARROW_RIGHT, (cs->view.x + cs->view.w) - 9, yc, color, blink);
     }
     return prim;
 }
@@ -878,16 +887,16 @@ void *func_800A2FCC(void *renderCtx, void *prim, s32 color, s32 corners)
  * @brief Render a number (with a fixed prefix glyph) into the ordering table.
  *
  * Formats @p value @c +1 to a decimal glyph string and blanks its leading zero,
- * then emits a fixed prefix glyph (@c 0x32) followed by the digit(s) via
- * @c func_8002FF34, advancing the glyph position between each. When @p twoDigit
+ * then emits @c ICON_PAGE followed by the digit(s) via
+ * @c drawIcon, advancing the glyph position between each. When @p twoDigit
  * is set both the tens and units digits are drawn (advancing 9 then 6);
  * otherwise only the units digit is drawn after the prefix.
  *
  * @param otBase   Ordering-table base for the glyph primitives.
  * @param pkt      Current GPU packet cursor.
- * @param pos      Starting glyph position (passed to @c func_8002FF34; advanced per glyph).
- * @param w        Glyph width forwarded to @c func_8002FF34.
- * @param col      Glyph color/palette forwarded to @c func_8002FF34.
+ * @param pos      Starting x position (passed to @c drawIcon; advanced per glyph).
+ * @param w        Y position forwarded to @c drawIcon.
+ * @param col      Color word forwarded to @c drawIcon.
  * @param value    Number to display (rendered as @c value @c + @c 1).
  * @param twoDigit Non-zero to draw the tens digit as well as the units digit.
  * @return The advanced packet cursor.
@@ -895,16 +904,16 @@ void *func_800A2FCC(void *renderCtx, void *prim, s32 color, s32 corners)
 void *func_800A30C8(void *otBase, void *pkt, s32 pos, s32 w, s32 col, s32 value, s32 twoDigit) {
     u8 buf[16];
 
-    intToDecStringShort(value + 1, buf, 0x28);
-    replaceLeadingZeros(&buf[3], 1, 0x28, 7);
+    intToDecStringShort(value + 1, buf, ICON_SMALL_DIGIT_0);
+    replaceLeadingZeros(&buf[3], 1, ICON_SMALL_DIGIT_0, ICON_BLANK);
 
-    pkt = func_8002FF34(otBase, pkt, 0x32, pos, w, col);
+    pkt = drawIcon(otBase, pkt, ICON_PAGE, pos, w, col);
     pos += 9;
     if (twoDigit != 0) {
-        pkt = func_8002FF34(otBase, pkt, buf[3], pos, w, col);
+        pkt = drawIcon(otBase, pkt, buf[3], pos, w, col);
         pos += 6;
     }
-    pkt = func_8002FF34(otBase, pkt, buf[4], pos, w, col);
+    pkt = drawIcon(otBase, pkt, buf[4], pos, w, col);
     return pkt;
 }
 
@@ -1363,7 +1372,7 @@ s32 func_800A390C(s32 flags0, s32 flags1) {
 /**
  * @brief Build a 12x12 font-glyph sprite and prepend it to the ordering table.
  *
- * Fills a free-size @c SPRT (code 0x64, carried in @c g_menuColor) for tile
+ * Fills a free-size @c SPRT (code 0x64, carried in @c g_menuTint) for tile
  * @p tileIdx of a 21-tile-per-row font texture: CLUT from @p palArg's low 3 bits,
  * menu color chosen by its high bits, 12x12 size, position @p xy, and UV from the
  * tile's column/row. Links the primitive at the head of the OT carried in @p ot
@@ -1395,9 +1404,9 @@ u32 func_800A3C7C(u32 ot, SPRT *prim, s32 tileIdx, s32 palArg, u32 xy) {
     palArg = palArg & 7;
     prim->clut = (palArg << 6) + 0x3812; /* getClut(288, 224 + palette) */
     if (head) {
-        palArg = g_menuColor[1]; /* palette register reused: now the color */
+        palArg = g_menuTint[MENU_TINT_BLINK]; /* palette register reused: now the color */
     } else {
-        palArg = g_menuColor[0];
+        palArg = g_menuTint[MENU_TINT_NORMAL];
     }
 
     *(u32 *)&prim->w = 0xC000C; /* 12 x 12 */
@@ -1538,12 +1547,12 @@ INCLUDE_ASM("asm/ovl/tripletriad/nonmatchings/be_object4", func_800A3EE0);
 /**
  * @brief Wrapper for func_800A3EE0 that selects a lookup table entry based on the 5th argument.
  *
- * If stack0 >= 8, uses g_menuColor[1] and subtracts 8 from stack0.
- * Otherwise uses g_menuColor[0] with stack0 unchanged.
+ * If stack0 >= 8, uses g_menuTint[MENU_TINT_BLINK] and subtracts 8 from stack0.
+ * Otherwise uses g_menuTint[MENU_TINT_NORMAL] with stack0 unchanged.
  * Passes the lookup value and adjusted stack0 as extra args to func_800A3EE0.
  *
  * @param a0-a3 Parameters passed through to func_800A3EE0.
- * @param stack0 Index parameter; if >= 8, adjusted by -8 and table index 1 is used.
+ * @param stack0 Index parameter; if >= 8, adjusted by -8 and the blink tint is used.
  * @return The advanced packet cursor from func_800A3EE0 (returned by the tail call;
  *         func_800A40F0 threads it through). Typed @c void* rather than @c void.
  */
@@ -1551,11 +1560,11 @@ void *func_800A4098(void *a0, void *a1, s32 a2, s32 a3, s32 stack0) {
     s32 idx;
     if (stack0 >= 8) {
         stack0 -= 8;
-        idx = 1;
+        idx = MENU_TINT_BLINK;
     } else {
-        idx = 0;
+        idx = MENU_TINT_NORMAL;
     }
-    return func_800A3EE0(a0, a1, a2, a3, g_menuColor[idx], stack0);
+    return func_800A3EE0(a0, a1, a2, a3, g_menuTint[idx], stack0);
 }
 
 /**
@@ -1566,7 +1575,7 @@ void *func_800A4098(void *a0, void *a1, s32 a2, s32 a3, s32 stack0) {
  * (@c D_801D4AF6). Otherwise it looks up the cell's card index in
  * @c D_801D4A88, picks a highlight color (7 if the card passes @c func_80023B14,
  * else 1), and emits three primitives at a position derived from the cursor
- * view rect: a glyph (@c func_8002FF34), the card image (@c func_800A3D2C), and
+ * view rect: a glyph (@c drawIcon), the card image (@c func_800A3D2C), and
  * a frame (@c func_800A4098). The packet cursor is threaded through and returned.
  *
  * @param otBase  Ordering-table base forwarded to each emitter.
@@ -1602,7 +1611,7 @@ void *func_800A40F0(void *otBase, void *pkt, s32 row, s32 col, s32 xOffset)
     x = (cardImg = D_801D49C8.view.x + xOffset);
     y = cs->view.y + col * 13 + 8;
 
-    pkt = func_8002FF34(otBase, pkt, 0xD7, x + 7, y, cs->packedColor);
+    pkt = drawIcon(otBase, pkt, ICON_CARD, x + 7, y, cs->packedColor);
     cardImg = (s32)func_80023A54(cell);
     pkt = func_800A3D2C(otBase, pkt, x + 0x15, y, cardImg, color);
     x += 0x9A;
@@ -1612,7 +1621,7 @@ void *func_800A40F0(void *otBase, void *pkt, s32 row, s32 col, s32 xOffset)
 /**
  * @brief Emit one glyph into the OT at a grid cell derived from a linear index.
  *
- * Forwards to the glyph emitter @c func_8002FF34 (glyph 0) with the position
+ * Forwards to @c drawIcon (@c ICON_CHOICE_CURSOR) with the position
  * taken from @p ctx and the column @c a3 @c % @c 11 at a 13px pitch. Returns
  * the advanced packet cursor.
  *
@@ -1622,7 +1631,7 @@ void *func_800A40F0(void *otBase, void *pkt, s32 row, s32 col, s32 xOffset)
  */
 void *func_800A4250(s32 *otBase, void *pkt, func_800A4250_arg2 *ctx, s32 a3) {
     s32 w = ctx->unk02 + 0xB;
-    return func_8002FF34(otBase, pkt, 0,
+    return drawIcon(otBase, pkt, ICON_CHOICE_CURSOR,
                          ctx->unk00 - 0x13,
                          w + (a3 % 11) * 13,
                          ctx->unk10);
@@ -1658,14 +1667,14 @@ void *func_800A42D0(void *otBase, void *pkt)
     }
 
     pkt = func_800A31EC(otBase, pkt);
-    pkt = func_8002FF34(otBase, pkt, 0x4D, cs->view.x + 0x7F, cs->view.y, cs->packedColor);
+    pkt = drawIcon(otBase, pkt, ICON_NUM, cs->view.x + 0x7F, cs->view.y, cs->packedColor);
 
     if (D_801D4AF6 >= 0xC) {
         pkt = func_800A2FCC(otBase, pkt, cs->packedColor, 3);
         pkt = func_800A31B8(otBase, pkt, cs->view.x + 0x28, cs->view.y, cs->packedColor, cs->row);
     }
 
-    pkt = func_8002FF34(otBase, pkt, 0x59, cs->view.x, cs->view.y, cs->packedColor);
+    pkt = drawIcon(otBase, pkt, ICON_CARDS, cs->view.x, cs->view.y, cs->packedColor);
     func_800A3398(cs->timer, &cs->view, &cs->work);
     pkt = func_800A3320(otBase, pkt, &cs->work);
     return func_800A3528(otBase, pkt, func_800A40F0);

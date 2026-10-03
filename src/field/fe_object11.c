@@ -3,9 +3,10 @@
 #include "gamestate.h"
 #include "battle.h"
 #include "sound.h"
-#include "btl_color.h"
-#include "btl_entity.h"
-#include "btl_sfx.h"
+#include "ui/countdown.h"
+#include "ui/seed_rank.h"
+#include "ui/window.h"
+#include "ui/dialog.h"
 #include "cd.h"
 #include "field/fe_object1.h"
 #include "field/fe_object1_2.h"
@@ -26,22 +27,22 @@
  *     (unless @c g_battleConfig.unk2 bit @c 0x10 is set) start the
  *     bank file or send the @ref D_8005F11C fade command depending
  *     on whether @c audioChannel0State is armed. Always writes
- *     @c D_80082C0A and pulses @ref sndCmd45.
+ *     @c g_battleConfig.unk2 and pulses @ref sndCmd45.
  *   - @c mode @c == @c 1 — full slot reset: zero the 16-byte
- *     @c D_800704A8.unkActive180 region, walk the @ref D_80085224
+ *     @c g_fieldEntity.unkActive180 region, walk the @ref D_80085224
  *     Actor pool and clear the cleanup-trigger bytes / @c flags @c & @c ~8
  *     on each entity flagged @c unk218 @c == @c -1, then fall into
  *     the mode-3 slot-clear block.
  *   - @c mode @c == @c 2 — just @ref func_800BF4A4 (Actor pool reset).
  *   - @c mode @c == @c 3 — slot table reset: @ref func_800BF28C plus
- *     reinit of each @c D_800704A8.slots[i] (mode/param/submode/p3-p6).
+ *     reinit of each @c g_fieldEntity.slots[i] (mode/param/submode/p3-p6).
  *
  * After the dispatch all paths run a common tail:
- *   - @ref FIELD_STATE_CAMERA_SHAKE → arm camera shake/vibrate.
+ *   - @ref FIELD_STATE_COUNTDOWN → show the countdown timer again.
  *   - @ref FIELD_STATE_FIELD_READY clear and @c levelUpDisplayTimer @c > @c 0
- *     → fire the SeeD level-up notification via @ref func_800316D4.
- *   - For each active battle entity, push the configured field pitch
- *     to the SPU via @ref setSfxPitch.
+ *     → fire the SeeD level-up notification via @ref showSeedRankNotification.
+ *   - Set each dialog's text speed from the message-speed setting
+ * (@ref setDialogTextSpeed).
  *   - Mirror @c D_80078DF8 bit @c 0x10 → @c FieldVars.field58 and,
  *     if @c fieldF0 is set, forward it through @ref func_800A4550.
  *
@@ -64,7 +65,7 @@ void func_800BF718(s32 mode) {
     switch (mode) {
     case 1:
         for (i = 0; i < 16; i++) {
-            D_800704A8.unkActive180[i] = 0;
+            g_fieldEntity.unkActive180[i] = 0;
         }
         e = D_80085224;
         D_800DE4FC = 0;
@@ -84,14 +85,14 @@ void func_800BF718(s32 mode) {
     case 3:
         func_800BF28C(0);
         for (i = 0; i < 8; i++) {
-            entIdx = D_800704A8.entityIndex[0];
-            D_800704A8.slots[i].mode = 0;
-            D_800704A8.slots[i].submode = 0;
-            D_800704A8.slots[i].p5 = 0x100;
-            D_800704A8.slots[i].p6 = 0x100;
-            D_800704A8.slots[i].p3 = 0;
-            D_800704A8.slots[i].p4 = 0;
-            D_800704A8.slots[i].param = entIdx;
+            entIdx = g_fieldEntity.entityIndex[0];
+            g_fieldEntity.slots[i].mode = 0;
+            g_fieldEntity.slots[i].submode = 0;
+            g_fieldEntity.slots[i].p5 = 0x100;
+            g_fieldEntity.slots[i].p6 = 0x100;
+            g_fieldEntity.slots[i].p3 = 0;
+            g_fieldEntity.slots[i].p4 = 0;
+            g_fieldEntity.slots[i].param = entIdx;
         }
         break;
     case 0:
@@ -128,7 +129,7 @@ void func_800BF718(s32 mode) {
                 g_fieldVars->soundHandle0 = sndCmd1A(v, 0x3C, g_fieldVars->musicVolume);
             }
         }
-        D_80082C0A = g_fieldVars->fieldB6;
+        g_battleConfig.unk2 = g_fieldVars->fieldB6;
         sndCmd45();
         break;
     case 2:
@@ -136,25 +137,25 @@ void func_800BF718(s32 mode) {
         break;
     }
 
-    if (g_fieldVars->stateFlags & FIELD_STATE_CAMERA_SHAKE) {
-        setCameraShakeParams(g_fieldVars->cameraShakeX, g_fieldVars->cameraShakeY);
-        setCameraVibrateState(1);
+    if (g_fieldVars->stateFlags & FIELD_STATE_COUNTDOWN) {
+        setCountdownPosition(g_fieldVars->countdownX, g_fieldVars->countdownY);
+        setCountdownVisible(1);
     }
     seed = g_fieldVars;
     if (!(seed->stateFlags & FIELD_STATE_FIELD_READY)) {
         if ((s16)seed->levelUpDisplayTimer > 0) {
             prevLevel = (s32)((s16)seed->prevSeedExp) / 100;
             currLevel = (s32)((s16)seed->seedExp) / 100;
-            func_800316D4(prevLevel, currLevel,
+            showSeedRankNotification(prevLevel, currLevel,
                           g_seedSalaryTable[prevLevel] * 10,
                           g_seedSalaryTable[currLevel] * 10);
             g_fieldVars->levelUpDisplayTimer = 0x5A;
         }
     }
     for (i = 0; i < getMaxBattleEntities(); i++) {
-        setSfxPitch(i, D_800562C8[g_gameState.config.fieldMsgSpeed]);
+        setDialogTextSpeed(i, g_textSpeeds[g_gameState.config.fieldMsgSpeed]);
     }
-    g_fieldVars->field58 = (D_80078DF8 & 0x10) >> 4;
+    g_fieldVars->field58 = (g_battleChars.levelEntries[15].abilityFlags & 0x10) >> 4;
     if (g_fieldVars->fieldF0 != 0) {
         func_800A4550(g_fieldVars->fieldF1 | g_fieldVars->field58);
     }
@@ -166,7 +167,7 @@ void func_800BF718(s32 mode) {
  * @brief Field-engine area-load / scene-reset.
  *
  * Repopulates @ref g_fieldVars, snapshots a few @c SaveMainData fields,
- * resets SFX/camera state, then — for @c mode @c == @c 1 or @c 3 —
+ * resets dialog/camera state, then — for @c mode @c == @c 1 or @c 3 —
  * wipes and re-primes the script-VM entity pools and rebinds each
  * active party slot to its @ref Actor.
  *
@@ -225,32 +226,32 @@ s32 *func_800BFBBC(u8 *entity, Eline *eline, u16 *a2, s32 mode) {
     seed->charKos[6] = g_gameState.chars[6].kos;
     seed->charKos[7] = g_gameState.chars[7].kos;
 
-    seed->field54 = D_800704A8.field_0x120;
+    seed->field54 = g_fieldEntity.field_0x120;
     seed->field56 = D_80082C8D;
     D_800DE8C8[1] = 2;
     ((u8 *)D_800DE8C8)[0xB] = 0;
-    resetAllSfx();
-    setCameraVibrateIntensity(0x1000);
+    resetAllDialogs();
+    setHudBrightness(0x1000);
     D_800DE4FD[0] = 0;
     D_800DE7B0.count = 0;
     func_800BE30C(entity);
 
     if (mode == 1 || mode == 3) {
         D_80085390 = 0;
-        D_800704A8.field1B4 = 0xFFFFFF;
-        D_800704A8.unk1A6 = 0;
-        D_800704A8.oscillators[0].mode = 0;
-        D_800704A8.oscillators[1].mode = 0;
-        D_800704A8.unk1A3 = 0;
+        g_fieldEntity.field1B4 = 0xFFFFFF;
+        g_fieldEntity.unk1A6 = 0;
+        g_fieldEntity.oscillators[0].mode = 0;
+        g_fieldEntity.oscillators[1].mode = 0;
+        g_fieldEntity.unk1A3 = 0;
         g_fieldVars->stateFlags &= ~FIELD_STATE_FLAG_400;
         g_fieldVars->fieldCF = 0;
         g_fieldVars->fieldD1 &= 0xFC;
-        g_fieldVars->sfxStartMask = 0;
-        g_fieldVars->sfxEntryMask = 0;
-        g_fieldVars->sfxActiveMask = 0;
+        g_fieldVars->dialogStartMask = 0;
+        g_fieldVars->dialogEntryMask = 0;
+        g_fieldVars->dialogActiveMask = 0;
         for (i = 0; i < getMaxBattleEntities(); i++) {
             D_80085300[i].type = 6;
-            D_80085300[i].volume = 0x1000;
+            D_80085300[i].brightness = 0x1000;
         }
         g_fieldVars->fieldF0 = 0;
         g_fieldVars->fieldF1 = 0;
@@ -261,7 +262,7 @@ s32 *func_800BFBBC(u8 *entity, Eline *eline, u16 *a2, s32 mode) {
         D_80085391 = D_800DE8D8;
         D_800852F0 = (u16 *)D_800DE4E4;
         D_80085380 = (s32 *)D_800DE4E8;
-        D_80082C0A = g_fieldVars->fieldB6;
+        g_battleConfig.unk2 = g_fieldVars->fieldB6;
         D_80085384 = (Dline *)func_800BE7F4((Eline *)eline);
         D_800852F4 = (Bganime *)func_800BEA84(D_80085384);
         D_80085224 = (Actor *)func_800BE924(D_800852F4);
@@ -271,10 +272,10 @@ s32 *func_800BFBBC(u8 *entity, Eline *eline, u16 *a2, s32 mode) {
         for (i = 0x400; i < 0x500; i++) {
             gs_bytes[i + GAMESTATE_MISC3_OFFSET] = 0;
         }
-        D_800704A8.dialogState = 4;
-        D_800704A8.entityIndex[0] = 0xFF;
-        D_800704A8.entityIndex[1] = 0xFF;
-        D_800704A8.entityIndex[2] = 0xFF;
+        g_fieldEntity.dialogState = 4;
+        g_fieldEntity.entityIndex[0] = 0xFF;
+        g_fieldEntity.entityIndex[1] = 0xFF;
+        g_fieldEntity.entityIndex[2] = 0xFF;
         g_fieldVars->memberSlot[0] = 0xFF;
         g_fieldVars->memberSlot[1] = 0xFF;
         g_fieldVars->memberSlot[2] = 0xFF;
@@ -285,14 +286,14 @@ s32 *func_800BFBBC(u8 *entity, Eline *eline, u16 *a2, s32 mode) {
         for (i = 0; i < 3; i++) {
             for (e = D_80085224, D_800DE4FC = 0; D_800DE4FC < D_80085388; D_800DE4FC++, e++) {
                 if (g_gameState.battleParty[i] == e->field_0x255) {
-                    e->posX = (s32)((s16)D_800704A8.position_x) << 12;
-                    e->posY = (s32)((s16)D_800704A8.position_y) << 12;
-                    e->field_0x241 = (u8)D_800704A8.anim_state;
-                    rot = D_800704A8.spawnTriIdx;
+                    e->posX = g_fieldEntity.position_x << 12;
+                    e->posY = g_fieldEntity.position_y << 12;
+                    e->field_0x241 = g_fieldEntity.anim_state;
+                    rot = g_fieldEntity.spawnTriIdx;
                     e->context.flags |= 4;
                     e->triIdx = rot;
                     g_fieldVars->memberSlot[i] = e->field_0x256;
-                    D_800704A8.entityIndex[i] = e->field_0x256;
+                    g_fieldEntity.entityIndex[i] = e->field_0x256;
                     break;
                 }
             }

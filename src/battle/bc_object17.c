@@ -1,4 +1,5 @@
 #include "common.h"
+#include "ui/icon.h"
 
 extern u8 D_80102E10[];
 extern u8 D_80102E14[];
@@ -11,30 +12,30 @@ void intToDecStringShort(s32, u8 *, s32);
 void replaceLeadingZeros(u8 *, s32, s32, s32);
 
 /**
- * @brief Call getAnimFrameParam with a1=0, pass result to func_80030F10.
+ * @brief Call getPadReadButtons with a1=0, pass result to applyButtonRemapTranslation.
  *
- * @param a0 First argument passed through to getAnimFrameParam.
+ * @param a0 First argument passed through to getPadReadButtons.
  */
 void func_800CFF2C(s32 a0) {
-    func_80030F10(getAnimFrameParam(a0, 0));
+    applyButtonRemapTranslation(getPadReadButtons(a0, 0));
 }
 
 /**
- * @brief Call getAnimFrameStatusFlags with a1=0, pass result to func_80030F10.
+ * @brief Call getPadReadRepeat with a1=0, pass result to applyButtonRemapTranslation.
  *
- * @param a0 First argument passed through to getAnimFrameStatusFlags.
+ * @param a0 First argument passed through to getPadReadRepeat.
  */
 void func_800CFF54(s32 a0) {
-    func_80030F10(getAnimFrameStatusFlags(a0, 0));
+    applyButtonRemapTranslation(getPadReadRepeat(a0, 0));
 }
 
 /**
- * @brief Call func_80027A58 with a1=0, pass result to func_80030F10.
+ * @brief Call getPadReadPressed with a1=0, pass result to applyButtonRemapTranslation.
  *
- * @param a0 First argument passed through to func_80027A58.
+ * @param a0 First argument passed through to getPadReadPressed.
  */
 void func_800CFF7C(s32 a0) {
-    func_80030F10(func_80027A58(a0, 0));
+    applyButtonRemapTranslation(getPadReadPressed(a0, 0));
 }
 
 /**
@@ -124,10 +125,10 @@ INCLUDE_ASM("asm/ovl/battle/nonmatchings/bc_object17", func_800D0844);
 INCLUDE_ASM("asm/ovl/battle/nonmatchings/bc_object17", func_800D0868);
 
 /**
- * @brief Wrapper for setSfxGlobalFlag.
+ * @brief Wrapper for setFocusedDialog.
  */
 void func_800D08C4(void) {
-    setSfxGlobalFlag();
+    setFocusedDialog();
 }
 
 /**
@@ -360,9 +361,9 @@ void func_800D18C4(s32 a0, u8 *a1) {
         a0 += 0xFFF;
     }
     a0 >>= 12;
-    intToDecStringShort(a0, buf, 0x60);
+    intToDecStringShort(a0, buf, ICON_THIN_DIGIT_0);
     p = &buf[1];
-    replaceLeadingZeros(p, 3, 0x60, 0x6B);
+    replaceLeadingZeros(p, 3, ICON_THIN_DIGIT_0, ICON_THIN_SLASH);
     b0 = buf[1];
     b1 = p[1];
     a1[0] = b0;

@@ -28,6 +28,19 @@ typedef struct {
     s32 z;             /* 0x08 */
 } WorldPos;
 
+/**
+ * @brief One world-map dialog slot (@c D_800C526C, stride 16 bytes).
+ */
+typedef struct {
+    /* 0x00 */ s8  field00;     /**< Slot enable flag; -1 = inactive, -2 = direct. */
+    /* 0x01 */ s8  field01;     /**< Text-box position/alignment mode (0..3). */
+    /* 0x02 */ s8  field02;     /**< Dialog index. */
+    /* 0x03 */ s8  field03;     /**< Value for setDialogAnimSpeed. */
+    /* 0x04 */ u16 field04;     /**< Text-box anchor X. */
+    /* 0x06 */ u16 field06;     /**< Text-box anchor Y. */
+    /* 0x08 */ u8  pad08[8];
+} WorldDialogSlot; /* 0x10 = 16 bytes */
+
 /** 4-byte slot read as either a full signed word (angle compares and deltas
     are signed) or just the low halfword. */
 typedef union {
@@ -243,7 +256,7 @@ extern s32            D_800C4DB0;
 extern s32            D_800C4DB4;
 extern s32            D_800C4DBC;
 extern SeqEntry       D_800C4FD8[];      /**< Sequence/SFX clip table. */
-extern SfxSlot        D_800C526C[];      /**< Active SFX voice slots. */
+extern WorldDialogSlot D_800C526C[]; /**< The world map's dialog slots. */
 extern s16            D_800C53C4[];      /**< Per-map halfword param table. */
 extern s16            D_800C53D0[];
 extern s16            D_800C53DC[];
@@ -496,7 +509,7 @@ extern CVECTOR    D_800DB0E0;          /**< Active background-color cache (progr
 /** Base of the world zone block: a table of s32 offsets, each relative to
  *  this pointer, locating one record. Entry 0 is the map-wide default. */
 extern s32       *D_800C9EE8;
-extern VECTOR     D_800DB0E8;          /**< World camera-base translation (GTE TR bias; used by setWorldMapTransVector and func_800423DC). */
+extern VECTOR     D_800DB0E8;          /**< World camera-base translation (GTE TR bias; used by setWorldMapTransVector and ApplyTransposeMatrixLV). */
 extern KindParams D_800C5480[];
 
 /**

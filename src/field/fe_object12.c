@@ -3,7 +3,8 @@
 #include "game.h"
 #include "field.h"
 #include "battle.h"
-#include "btl_color.h"
+#include "ui/gauge.h"
+#include "ui/seed_rank.h"
 #include "cdrom.h"
 #include "render.h"
 #include "snd_cd.h"
@@ -28,7 +29,7 @@ extern u8 D_80077BA8[];
  *    music 5, both volumes 0x7F, SeeD exp 500, the @ref FIELD_STATE_TRANSITION
  *    and @ref FIELD_STATE_FIELD_READY state bits,
  *    and message speed 2 (@c GameConfig.fieldMsgSpeed).
- *  - Always: clears the SFX masks and the first two anim-shadow slots,
+ *  - Always: clears the dialog masks and the first two anim-shadow slots,
  *    disables reverb, resets the sound-bank selector, and marks all
  *    three audio channel states and both sound handles inactive (-1).
  *  - Mirrors @c fieldB6 into @c g_battleConfig.unk2; when
@@ -36,7 +37,7 @@ extern u8 D_80077BA8[];
  *    and @c GameConfig.sealedFeatures and replays @c opHandler_SETPARTY2.
  *  - Publishes @c field56 to @c D_80082C8D, pushes the expected disc to
  *    the CD layer (@c setDiscNumber, @c D_800773C0 = disc - 1), derives
- *    the transition flag from @ref FIELD_STATE_TRANSITION, and installs the
+ *    the salary-enabled flag from @ref FIELD_STATE_TRANSITION, and installs the
  *    @c stopAllSounds VSync callback and @c func_80037D40 draw callback.
  *
  * @param fullReset Nonzero to wipe @c *g_fieldVars and apply new-game
@@ -77,12 +78,12 @@ void SmInitEventAll(s32 fullReset)
         g_gameState.config.fieldMsgSpeed = 2;
     }
 
-    g_fieldVars->sfxStartMask = 0;
-    g_fieldVars->sfxEntryMask = 0;
-    g_fieldVars->sfxActiveMask = 0;
+    g_fieldVars->dialogStartMask = 0;
+    g_fieldVars->dialogEntryMask = 0;
+    g_fieldVars->dialogActiveMask = 0;
     for (i = 0; i < 2; i++) {
         D_80085398[i].flag = 0;
-        clearAnimEntryActive(i);
+        hideGauge(i);
     }
     sndDisableReverb(0);
     g_fieldVars->soundBankSelector = 0;
@@ -111,7 +112,7 @@ void SmInitEventAll(s32 fullReset)
     vfv = g_fieldVars; /* volatile view: forces the tail's reloads of disc/stateFlags */
     disc = vfv->expectedDiscId;
     do { D_800773C0 = disc - 1; } while (0);
-    setTransitionFlag((((u32)vfv->stateFlags >> 3) ^ 1) & 1);
+    setSalaryEnabled((((u32)vfv->stateFlags >> 3) ^ 1) & 1);
     setVsyncCallback((s32)stopAllSounds);
     setDrawCallback((s32)func_80037D40);
 }

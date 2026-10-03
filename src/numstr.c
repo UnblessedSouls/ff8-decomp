@@ -2,38 +2,37 @@
 #include "psxsdk/libgpu.h"
 #include "psxsdk/libc.h"
 #include "battle.h"
+#include "ui/window.h"
+#include "ui/font.h"
+#include "ui/dialog.h"
 #include "game.h"
 #include "gamestate.h"
 #include "numstr.h"
 
-extern u8 D_8008386C;
-
 extern u8 D_80052A30[];
 extern u8 D_8008369C[];
-extern SfxSystem g_sfxEntries;
 extern u8 *getMagicNamePtr(s32 magicId);
 extern u8 *getBattleCharNameWrapper(s32 entityIdx);
 extern u8 *getCharNameWrapper(s32 charId);
 extern u8 *getCharNameWrapper2(s32 charId);
-extern u8 getDigitBaseCode(void);
 extern void copyString(u8 *dst, u8 *src);
 extern s32 btlStrlen(u8 *str);
-extern void func_8002F4B0(u8 *buf, s32 separator);
 extern u32 D_800529F4[];
 extern u32 D_80052A08[];
-extern s32 D_800834CC;
 
 /** @brief Reference kinds carried in bits 8 and up of an insertArgString code. */
 enum {
     MSG_ARG_BATTLE_CHAR = 0,    /* low 5 bits: battle character slot */
     MSG_ARG_NAME = 3,           /* low byte: character, Angelo, Griever or Boko name */
-    MSG_ARG_NUMBER = 4          /* low byte: format and SFX value slot */
+    MSG_ARG_NUMBER = 4 /* low byte: format and message value slot */
 };
 
 static inline u8 *appendString(u8 *dst, u8 *str);
 static inline u8 *getNameString(s32 code, u8 *buf);
 static inline u8 *getNumberString(s32 code, u8 *buf);
 static inline u8 *insertArgString(u8 *dst, s32 code, u8 *buf);
+static u8 *nextMessagePage(u8 *str);
+static void func_8002F4B0(u8 *buf, s32 separator);
 
 /**
  * @brief Convert an unsigned integer to a decimal digit string using divisor table D_800529F4.
@@ -222,30 +221,57 @@ void u32ToHexTiles(u32 val, u8 *dst, s32 base_char) {
 }
 
 
-INCLUDE_ASM("asm/nonmatchings/numstr", func_8002F4B0);
+/**
+ * @brief Put a separator between every three digits of a number string.
+ *
+ * Works in place from the end: the terminator moves to the new end, then each
+ * group of three digits after the first moves right with @p separator in
+ * front of it.
+ *
+ * @param buf Digit string, with room for the separators.
+ * @param separator Character put between the groups.
+ */
+static void func_8002F4B0(u8 *buf, s32 separator) {
+    u8 *src;
+    u8 *dst;
+    s32 len;
+    s32 n;
+
+    len = btlStrlen(buf);
+    n = (len - 1) / 3;
+    src = buf + len;
+    dst = src + n;
+    *dst = 0;
+    /* Load-bearing: n counts down (an ascending index does not match), and dst
+     * steps before src (gcc sets the two pointers up in the reverse order). */
+    for (; n > 0; n--) {
+        dst[-1] = src[-1];
+        dst[-2] = src[-2];
+        dst[-3] = src[-3];
+        dst[-4] = separator;
+        dst -= 4;
+        src -= 3;
+    }
+}
 
 
 /**
- * @brief Advance through a control-coded string to the next segment.
+ * @brief Step to the next line of a message.
  *
- * Scans @p str byte-by-byte, handling control codes:
- *  - 0: end of string (returns NULL).
- *  - 1: line break (returns pointer past it).
- *  - 2: page break (returns pointer past it).
- *  - 6: color code (reads next byte into D_8008386C, then continues).
- *  - 7: section end (returns pointer past it).
+ * Scans past the next newline (2) or page break (1 or 7). A colour command (6)
+ * on the way stores its argument in @c g_messageColor.
  *
- * @param str Pointer to control-coded string, or NULL.
- * @return Pointer to the next unprocessed byte, or NULL on end/null input.
+ * @param str Message in the game's encoding, or NULL.
+ * @return The first byte of the next line, or NULL at the end of the message.
  */
-u8 *func_8002F548(u8 *str) {
+u8 *nextMessageLine(u8 *str) {
     s32 ch;
     u8 *colorPtr;
 
-    if (str == 0)
-        return 0;
+    if (str == NULL)
+        return NULL;
 
-    colorPtr = &D_8008386C;
+    colorPtr = &g_messageColor;
 
     do {
         ch = *str++;
@@ -263,30 +289,27 @@ u8 *func_8002F548(u8 *str) {
             return str;
     } while (ch != 0);
 
-    return 0;
+    return NULL;
 }
 
 
 /**
- * @brief Advance through a control-coded string, processing embedded commands.
+ * @brief Step to the next page of a message.
  *
- * Scans @p str byte-by-byte, handling control codes:
- *  - 0: end of string (returns NULL).
- *  - 1: line/segment break (returns pointer past the break).
- *  - 6: color code (reads next byte into D_8008386C, then continues).
- *  - 7: section end (returns pointer past it). 
+ * Scans past the next page break (1 or 7); newlines do not stop it. A colour
+ * command (6) on the way stores its argument in @c g_messageColor.
  *
- * @param str Pointer to control-coded string, or NULL.
- * @return Pointer to the next unprocessed byte, or NULL on end/null input.
+ * @param str Message in the game's encoding, or NULL.
+ * @return The first byte of the next page, or NULL at the end of the message.
  */
-u8 *func_8002F5B4(u8 *str) {
+static u8 *nextMessagePage(u8 *str) {
     s32 ch;
     u8 *colorPtr;
 
-    if (str == 0)
-        return 0;
+    if (str == NULL)
+        return NULL;
 
-    colorPtr = &D_8008386C;
+    colorPtr = &g_messageColor;
 
     do {
         ch = *str++;
@@ -295,7 +318,7 @@ u8 *func_8002F5B4(u8 *str) {
             *colorPtr = *str++;
 
         if (ch == 0)
-            return 0;
+            return NULL;
 
         if (ch == 1)
             return str;
@@ -399,7 +422,7 @@ static inline u8 *getNameString(s32 code, u8 *buf) {
 }
 
 /**
- * @brief Format one of the SFX message values into @p buf.
+ * @brief Format one of the dialogs' message values into @p buf.
  *
  * The low byte of @p code picks both the format and the value slot:
  * 0x20-0x27 decimal with thousands separator, 0x30-0x37 plain decimal,
@@ -412,11 +435,11 @@ static inline u8 *getNameString(s32 code, u8 *buf) {
  * @return @p buf.
  */
 static inline u8 *getNumberString(s32 code, u8 *buf) {
-    SfxSystem *sfx;
+    DialogSystem *dialogs;
     s32 valIdx;
     u8 *hexPtr;
 
-    sfx = &g_sfxEntries;
+    dialogs = &g_dialogs;
     getDigitBaseCode();
     valIdx = code & 0xFF;
     *buf = 0;
@@ -424,22 +447,22 @@ static inline u8 *getNumberString(s32 code, u8 *buf) {
     case 0x20: case 0x21: case 0x22: case 0x23:
     case 0x24: case 0x25: case 0x26: case 0x27:
         valIdx -= 0x20;
-        intToDecString(sfx->msgValues[valIdx], buf, D_80083858.digits[0]);
-        func_8002F320(buf, 10, D_80083858.digits[0]);
-        func_8002F4B0(buf, D_80083858.separator);
+        intToDecString(dialogs->msgValues[valIdx], buf, g_numberFormat.digits[0]);
+        func_8002F320(buf, 10, g_numberFormat.digits[0]);
+        func_8002F4B0(buf, g_numberFormat.separator);
         break;
     case 0x30: case 0x31: case 0x32: case 0x33:
     case 0x34: case 0x35: case 0x36: case 0x37:
         valIdx -= 0x30;
-        intToDecString(sfx->msgValues[valIdx], buf, D_80083858.digits[0]);
-        func_8002F320(buf, 10, D_80083858.digits[0]);
+        intToDecString(dialogs->msgValues[valIdx], buf, g_numberFormat.digits[0]);
+        func_8002F320(buf, 10, g_numberFormat.digits[0]);
         break;
     case 0x40: case 0x41: case 0x42: case 0x43:
     case 0x44: case 0x45: case 0x46: case 0x47:
         valIdx -= 0x40;
-        u32ToHexTiles(sfx->msgValues[valIdx], buf, 1);
+        u32ToHexTiles(dialogs->msgValues[valIdx], buf, 1);
         for (hexPtr = buf; *hexPtr != 0; hexPtr++) {
-            *hexPtr = (D_80083858.digits - 1)[*hexPtr];
+            *hexPtr = (g_numberFormat.digits - 1)[*hexPtr];
         }
         break;
     }
@@ -486,10 +509,10 @@ static inline u8 *insertArgString(u8 *dst, s32 code, u8 *buf) {
  * Control codes:
  *   0x00, 0x01, 0x02, 0x07 — String terminators
  *   0x03 + byte — Two-byte name/string reference (type 3: names, locations)
- *   0x04 + byte — Two-byte numeric value format (type 4: SFX entry values)
+ * 0x04 + byte — Two-byte numeric value format (type 4: the dialogs' message values)
  *   0x05-0x06, 0x08-0x0B + byte — Escape: next byte stored literally
  *   0x0C + byte — Magic spell name lookup via getMagicNamePtr
- *   0x0D + byte — GF/item stat name lookup via getStatName
+ *   0x0D + byte — Item name lookup via getItemName
  *   0x0E + byte — Character name table set 0 (idx * 224 + subByte)
  *   0x0F + byte — Character name table set 1 (idx * 224 + subByte)
  *   0x10-0x18   — Direct name lookup via getBattleCharNameWrapper (type 0);
@@ -507,7 +530,7 @@ static inline u8 *insertArgString(u8 *dst, s32 code, u8 *buf) {
  *   MSG_ARG_NUMBER: getNumberString's format switch (40-entry jump table, 0x20-0x47):
  *     0x20-0x27 → Decimal with separator (intToDecString + F320 + F4B0)
  *     0x30-0x37 → Decimal plain (intToDecString + F320)
- *     0x40-0x47 → Hex, remapped to the D_80083858 digit glyphs (u32ToHexTiles)
+ * 0x40-0x47 → Hex, remapped to the g_numberFormat digit glyphs (u32ToHexTiles)
  *
  * insertArgString is inlined at its three call sites, producing 6 separate
  * jump tables. Handler code is shared across the expansions via
@@ -569,7 +592,7 @@ void decodeMessage(u8 *input, u8 *output, s32 maxLen) {
                 output = appendString(output - 1, getMagicNamePtr(ch - 0x20));
             } else if (ch == 0xD) {
                 ch = *input++;
-                output = appendString(output - 1, getStatName(ch - 0x20));
+                output = appendString(output - 1, getItemName(ch - 0x20));
             } else if (ch == 0xE || ch == 0xF) {
                 ch = (ch - 0xE) * 224;
                 lowCmd = *input++;
@@ -592,50 +615,106 @@ void decodeMessage(u8 *input, u8 *output, s32 maxLen) {
 
 
 /**
- * @brief Skip the leading segments of a message and decode the one that follows.
+ * @brief Decode the line a dialog is typing.
  *
- * Advances past @c skipCount segment breaks with func_8002F548, decodes from
- * there, and records where decoding started in @c storedPtr.
+ * Advances past @c typingLine line breaks with nextMessageLine, decodes from
+ * there, and records where that line starts in @c linePtr.
  *
- * @param msg    Message cursor.
+ * @param dialog Dialog.
  * @param output Output buffer for decodeMessage.
  */
-void func_8002FD28(MsgState *msg, u8 *output) {
-    s32 skip = msg->skipCount;
-    u8 *stream = msg->streamPtr;
+void decodeDialogLine(Dialog *dialog, u8 *output) {
+    s32 skip = dialog->typingLine;
+    u8 *stream = dialog->dataPtr;
     while (skip > 0) {
-        stream = func_8002F548(stream);
+        stream = nextMessageLine(stream);
         skip--;
     }
     decodeMessage(stream, output, -1);
-    msg->storedPtr = stream;
+    dialog->linePtr = stream;
 }
 
 
 /**
- * @brief Step the cursor to its next segment and decode it.
+ * @brief Step a dialog to its next line and decode it.
  *
- * @param msg    Message cursor; @c storedPtr is advanced with func_8002F548.
+ * @param dialog Dialog; @c linePtr is advanced with nextMessageLine.
  * @param output Output buffer for decodeMessage.
  */
-void advanceAndDecodeMessage(MsgState *msg, u8 *output) {
-    u8 *next = func_8002F548(msg->storedPtr);
-    msg->storedPtr = next;
+void advanceAndDecodeMessage(Dialog *dialog, u8 *output) {
+    u8 *next = nextMessageLine(dialog->linePtr);
+    dialog->linePtr = next;
     decodeMessage(next, output, -1);
 }
 
 
 /**
- * @brief Decode the segment the cursor currently points at, without advancing.
+ * @brief Decode a dialog's current line without advancing.
  *
- * @param msg    Message cursor; @c storedPtr is read but not modified.
+ * @param dialog Dialog; @c linePtr is read but not modified.
  * @param output Output buffer for decodeMessage.
  */
-void decodeMessageDirect(MsgState *msg, u8 *output) {
-    decodeMessage(msg->storedPtr, output, -1);
+void decodeMessageDirect(Dialog *dialog, u8 *output) {
+    decodeMessage(dialog->linePtr, output, -1);
 }
 
 
-INCLUDE_ASM("asm/nonmatchings/numstr", func_8002FE0C);
+/**
+ * @brief Take the next character of the line a dialog is typing.
+ *
+ * Reads the decoded line at @c typedChars and moves it on: one byte for codes
+ * 0x10-0x18 and 0x20 up, two for a command and its argument (0x03-0x06 and
+ * 0x08-0x0F) or a two-byte glyph (0x19-0x1F). A newline (0x02) decodes the
+ * next line (@c typedChars back to 0, @c typingLine and @c typingRow up by
+ * one); a page break (0x01 or 0x07) decodes the next page and resets those
+ * counters and @c scrollY. The end of the message (0x00) is not stepped past.
+ *
+ * @param dialog The dialog.
+ * @param output Its decoded-line buffer.
+ * @return The byte read; for a two-byte code, the first byte in bits 8-15 and
+ * the second in bits 0-7.
+ */
+s32 nextDialogChar(Dialog *dialog, u8 *output) {
+    u8 *p;
+    s32 c;
+
+    p = output + dialog->typedChars;
+    c = *p++;
+    if (c < 0x20) {
+        if (c >= 0x19) {
+            c <<= 8;
+            c |= *p++;
+        } else if (c == 2) {
+            p = output;
+            dialog->typingRow++;
+            dialog->typingLine++;
+            advanceAndDecodeMessage(dialog, output);
+        } else if (c == 0) {
+            p--;
+        } else if (c == 1 || c == 7) {
+            dialog->typingRow = 0;
+            dialog->scrollY = 0;
+            dialog->typingLine = 0;
+            dialog->dataPtr = nextMessagePage(dialog->dataPtr);
+            dialog->linePtr = dialog->dataPtr;
+            p = output;
+            decodeMessage(dialog->dataPtr, output, -1);
+        } else if (c < 0x10) {
+            c <<= 8;
+            c |= *p++;
+        }
+    }
+    dialog->typedChars = p - output;
+    return c;
+}
 
 
+/**
+ * @brief Reset a dialog's typing progress: @c typedChars, @c typingRow and @c typingLine.
+ * @param entry The dialog.
+ */
+void resetDialogTyping(Dialog *entry) {
+    entry->typedChars = 0;
+    entry->typingLine = 0;
+    entry->typingRow = 0;
+}

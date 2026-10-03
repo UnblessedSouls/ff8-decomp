@@ -4,9 +4,12 @@
 #include "gamestate.h"
 #include "character.h"
 #include "battle.h"
+#include "ui/gauge.h"
+#include "ui/seed_rank.h"
 #include "sound.h"
 #include "cd.h"
-#include "btl_entity.h"
+#include "ui/window.h"
+#include "ui/dialog.h"
 #include "field/fe_object10.h"
 
 /**
@@ -109,9 +112,9 @@ s32 opHandler_OP168(Actor *actor) {
  *      500..599 = lvl 5, 2500..2599 = lvl 25, capping at 31 (exp = 3100).
  *   4. Pays salary: @c gil += @c g_seedSalaryTable[level] * 10 (capped at
  *      99,999,999).
- *   5. If state isn't muted (flags 0x10 and 0x1000 both clear), triggers the
- *      level-up notification: palette transition (@c func_800316D4 with old/new
- *      rank and old/new salary) plus three rank-up sound effects.
+ *   5. If state isn't muted (flags 0x10 and 0x1000 both clear), shows the SeeD
+ *      rank notification (@c showSeedRankNotification with old/new rank and
+ *      old/new salary) plus three rank-up sound effects.
  *   6. Stores @c totalKills as the new @c prevKillSum baseline.
  */
 void updateSeedLevel(void) {
@@ -146,7 +149,7 @@ void updateSeedLevel(void) {
             s32 oldLevel = (s16)g_fieldVars->prevSeedExp / 100;
             s32 newLevel = (s16)g_fieldVars->seedExp / 100;
 
-            func_800316D4(oldLevel, newLevel,
+            showSeedRankNotification(oldLevel, newLevel,
                           g_seedSalaryTable[oldLevel] * 10,
                           g_seedSalaryTable[newLevel] * 10);
 
@@ -256,7 +259,7 @@ void func_800BD794(void) { s32 i = 0; do { s32 status = getPackedField2Bit(i) - 
  *   - @c seedExpStepAcc — fires the SeeD level-up tick every @c 0x6000 steps,
  *     then clamps @c seedExp to @c [100, 0xC1C].
  *   - @c levelUpDisplayTimer — counts down each step; fires
- *     @c setTransitionPhase7 the frame it reaches @c 0.
+ *     @c hideSeedRankNotification the frame it reaches @c 0.
  *   - @c angeloLearnStepAcc — fires the Angelo trick learn tick every
  *     @c 0x250 steps.
  *
@@ -278,7 +281,7 @@ void func_800BD804(s32 stepDelta) {
         func_800BD5E0();
         func_800BD64C();
     }
-    if (D_8007809A & 1) return;
+    if (g_gameState.mainData.partyLockFlag & 1) return;
     if (!(g_fieldVars->stateFlags & 8)) {
         g_fieldVars->seedExpStepAcc += stepDelta;
         if ((u32)g_fieldVars->seedExpStepAcc >= 0x6000u) {
@@ -289,10 +292,10 @@ void func_800BD804(s32 stepDelta) {
         else if ((s16)g_fieldVars->seedExp >= 0xC1C) g_fieldVars->seedExp = 0xC1C;
     }
     if ((s16)g_fieldVars->levelUpDisplayTimer >= 0) {
-        if ((s16)g_fieldVars->levelUpDisplayTimer == 0) setTransitionPhase7();
+        if ((s16)g_fieldVars->levelUpDisplayTimer == 0) hideSeedRankNotification();
         g_fieldVars->levelUpDisplayTimer--;
     }
-    if (D_8007809A & 0x10) return;
+    if (g_gameState.mainData.partyLockFlag & 0x10) return;
     if ((u32)g_fieldVars->angeloLearnStepAcc >= 0x250u) {
         g_fieldVars->angeloLearnStepAcc = 0;
         func_800BD6EC();
@@ -310,10 +313,10 @@ void func_800BD804(s32 stepDelta) {
  *
  * On entry, mirrors party gil/dreamGil from @c g_gameState to
  * @c g_fieldVars, mirrors the audio-channel marker @c fieldD1 into
- * @c D_800704A8.unk1AB, and fades out per-slot SFX whose ambient
- * trigger has expired (@c sfxStartMask bit set without
- * @c sfxEntryMask). Then calls @c getPackedField2Bit for the active
- * dispatcher slot and stores the result into @c D_800704A8.packedFlagSlot.
+ * @c g_fieldEntity.unk1AB, and closes the per-slot dialogs whose ambient
+ * trigger has expired (@c dialogStartMask bit set without
+ * @c dialogEntryMask). Then calls @c getPackedField2Bit for the active
+ * dispatcher slot and stores the result into @c g_fieldEntity.packedFlagSlot.
  *
  * Runs four script-VM dispatch loops in order:
  *   - @c D_80085224 / @c D_80085388  — full @c Actor pool (stride 0x264);
@@ -321,7 +324,7 @@ void func_800BD804(s32 stepDelta) {
  *   - @c D_8008538C / @c D_800852F8 — @c Eline pool (stride 0x1A0);
  *     6 SFX triggers (groups 2..7) gated by @c D_800704BD.
  *   - @c D_80085384 / @c D_80085228 — @c Dline pool (stride 0x18C);
- *     2 SFX triggers (groups 6/7) gated by @c D_800704A8.unk015.
+ *     2 SFX triggers (groups 6/7) gated by @c g_fieldEntity.unk015.
  *   - @c D_800852F4 / @c D_80085391 — @c Bganime pool (stride 0x1B4);
  *     plain script tick, finalized by @c func_800B2BA0.
  *
@@ -334,7 +337,7 @@ void func_800BD804(s32 stepDelta) {
  * @param frame The frame's GPU work buffer, stashed in @c D_800DE8C8[0] for the
  *              rest of the tick. It is @em not a step delta despite the slot's
  *              old name — the step delta @c func_800BD804 consumes comes from
- *              @c D_800704A8.fieldStepDelta, read below.
+ *              @c g_fieldEntity.fieldStepDelta, read below.
  */
 void func_800BD9C4(FieldFrameBuf *frame) {
     s32 unused[16];
@@ -351,32 +354,32 @@ void func_800BD9C4(FieldFrameBuf *frame) {
     }
     if (D_8008A3D8.flags & 1) return;
 
-    func_800BD804(D_800704A8.fieldStepDelta);
+    func_800BD804(g_fieldEntity.fieldStepDelta);
     g_fieldVars->gilMirror      = g_gameState.mainData.party.gil;
     g_fieldVars->dreamGilMirror = g_gameState.mainData.party.dreamGil;
-    D_800704A8.unk1AB = g_fieldVars->fieldD1;
+    g_fieldEntity.unk1AB = g_fieldVars->fieldD1;
 
     {
         s32 i;
         for (i = 0; i < getMaxBattleEntities(); i++) {
-            if ((g_fieldVars->sfxEntryMask >> i) & 1) continue;
-            if (!((g_fieldVars->sfxStartMask >> i) & 1)) continue;
-            if (D_800704A8.ambientFlags & 0xC0) {
-                if (getSfxField28(i)) {
-                    if (!((g_fieldVars->sfxActiveMask >> i) & 1)) {
-                        fadeOutSfxSlow(i);
+            if ((g_fieldVars->dialogEntryMask >> i) & 1) continue;
+            if (!((g_fieldVars->dialogStartMask >> i) & 1)) continue;
+            if (g_fieldEntity.ambientFlags & 0xC0) {
+                if (getDialogTypingDone(i)) {
+                    if (!((g_fieldVars->dialogActiveMask >> i) & 1)) {
+                        closeDialogAnimated(i);
                     }
                 }
             }
-            if (getSfxField1C(i)) continue;
-            if (!getSfxField28(i)) continue;
-            g_fieldVars->sfxStartMask &= ~(1 << i);
+            if (getOpenDialogScale(i)) continue;
+            if (!getDialogTypingDone(i)) continue;
+            g_fieldVars->dialogStartMask &= ~(1 << i);
         }
     }
 
     {
         u8 packed = (u8)getPackedField2Bit(g_fieldVars->fieldF2);
-        SystemState *sys = &D_800704A8;
+        SystemState *sys = &g_fieldEntity;
         sys->packedFlagSlot = packed;
     }
 
@@ -389,7 +392,7 @@ void func_800BD9C4(FieldFrameBuf *frame) {
                 s1 = 0x10;
                 func_800B9288(e);
 
-                if (D_800704A8.unk015 != 0) {
+                if (g_fieldEntity.unk015 != 0) {
                     e->triggerSfx7 = 0;
                     e->unk248 = 0;
                 } else {
@@ -499,7 +502,7 @@ void func_800BD9C4(FieldFrameBuf *frame) {
         if (D_80085228 != 0) {
             do {
                 s1 = 0x10;
-                if (ec->activeMarker != 0 && !D_800704A8.unk015) {
+                if (ec->activeMarker != 0 && !g_fieldEntity.unk015) {
                     if (ec->trigger6 != 0) {
                         func_800AE8B4(ec, 6, (u16)(ec->context.rangeLo + 2));
                         ec->trigger6 = 0;
@@ -1188,14 +1191,14 @@ void func_800BF28C(s32 a0) {
 
 
 /**
- * @brief Restore SFX/anim channels and dialog state after a load.
+ * @brief Restore the dialogs and gauges after a load.
  *
  * Calls @c func_800BF28C(1) to do early setup, then iterates active
- * SFX slots restoring playback for any with their @c sfxStartMask
- * bit set, then iterates anim slots dispatching to @c setupAnimEntry
- * or @c setupAnimEntryFull based on the @c flag field. Finally
+ * dialog slots, reopening any with their @c dialogStartMask
+ * bit set, then iterates the gauge slots, dispatching to @c showGauge
+ * or @c showGaugeFull based on the @c flag field. Finally
  * restores the dialog state from @c g_fieldVars and clears the
- * D_800704A8 mode-slot[0] to a default state mirroring the active
+ * g_fieldEntity mode-slot[0] to a default state mirroring the active
  * entity index.
  *
  * @note @c D_80085398[].flag is treated as @c s16 (signed compare with
@@ -1209,14 +1212,14 @@ void func_800BF4A4(void) {
     func_800BF28C(1);
 
     for (i = 0; i < getMaxBattleEntities(); i++) {
-        if ((g_fieldVars->sfxStartMask >> i) & 1) {
-            initSfxPlayback(i, (u8 *)D_80085300[i].payload);
-            func_8002E064(i, (s16 *)&D_80085300[i]);
-            startSfxSlow(i);
-            setSfxGlobalFlag(i);
+        if ((g_fieldVars->dialogStartMask >> i) & 1) {
+            setDialogMessage(i, (u8 *)D_80085300[i].payload);
+            setDialogRect(i, &D_80085300[i].rect);
+            openDialogAnimated(i);
+            setFocusedDialog(i);
         }
-        setSfxEntityType(i, D_80085300[i].type);
-        setSfxEntryVolume(i, D_80085300[i].volume);
+        setDialogEntityType(i, D_80085300[i].type);
+        setDialogBrightness(i, D_80085300[i].brightness);
     }
 
     for (i = 0; i < 2; i++) {
@@ -1224,44 +1227,44 @@ void func_800BF4A4(void) {
         buf[1] = D_80085398[i].fieldC;
         switch (D_80085398[i].flag) {
         case 1:
-            setupAnimEntry(i, D_80085398[i].fieldA, (s32)buf,
+            showGauge(i, D_80085398[i].fieldA, buf,
                            D_80085398[i].field8, D_80085398[i].field6,
                            D_80085398[i].field4);
             break;
         case 2:
-            setupAnimEntryFull(i, D_80085398[i].fieldA, (s32)buf,
+            showGaugeFull(i, D_80085398[i].fieldA, buf,
                                D_80085398[i].field8, D_80085398[i].field6,
                                D_80085398[i].field4, D_80085398[i].field2);
             break;
         }
     }
 
-    if (D_800704A8.dialogCount == D_800704A8.dialogTimer) {
+    if (g_fieldEntity.dialogCount == g_fieldEntity.dialogTimer) {
         g_fieldVars->dialogStateMirror = 0;
     }
-    if ((s16)g_fieldVars->dialogStateMirror == 0) {
-        D_800704A8.dialogState = 2;
-        D_800704A8.dialogCount = 0x10;
-        D_800704A8.dialogTimer = 0xFF;
-        D_800704A8.field_0x10E = 0xFF;
-        D_800704A8.field_0x110 = 0xFF;
-        D_800704A8.field_0x112 = 0xFF;
+    if (g_fieldVars->dialogStateMirror == 0) {
+        g_fieldEntity.dialogState = 2;
+        g_fieldEntity.dialogCount = 0x10;
+        g_fieldEntity.dialogTimer = 0xFF;
+        g_fieldEntity.field_0x10E = 0xFF;
+        g_fieldEntity.field_0x110 = 0xFF;
+        g_fieldEntity.field_0x112 = 0xFF;
     } else {
-        D_800704A8.dialogState = g_fieldVars->dialogStateMirror;
-        D_800704A8.dialogCount = g_fieldVars->fieldDC;
-        D_800704A8.dialogTimer = g_fieldVars->fieldDA;
-        D_800704A8.field_0x10E = g_fieldVars->fieldDE;
-        D_800704A8.field_0x110 = g_fieldVars->fieldE0;
-        D_800704A8.field_0x112 = g_fieldVars->fieldE2;
-        D_800704A8.field_0x114 = g_fieldVars->fieldE4;
-        D_800704A8.field_0x116 = g_fieldVars->fieldE6;
-        D_800704A8.field_0x118 = g_fieldVars->fieldE8;
-        D_800704A8.field_0x11A = g_fieldVars->fieldEA;
-        D_800704A8.field_0x11C = g_fieldVars->fieldEC;
-        D_800704A8.field_0x11E = g_fieldVars->fieldEE;
+        g_fieldEntity.dialogState = g_fieldVars->dialogStateMirror;
+        g_fieldEntity.dialogCount = g_fieldVars->fieldDC;
+        g_fieldEntity.dialogTimer = g_fieldVars->fieldDA;
+        g_fieldEntity.field_0x10E = g_fieldVars->fieldDE;
+        g_fieldEntity.field_0x110 = g_fieldVars->fieldE0;
+        g_fieldEntity.field_0x112 = g_fieldVars->fieldE2;
+        g_fieldEntity.field_0x114 = g_fieldVars->fieldE4;
+        g_fieldEntity.field_0x116 = g_fieldVars->fieldE6;
+        g_fieldEntity.field_0x118 = g_fieldVars->fieldE8;
+        g_fieldEntity.field_0x11A = g_fieldVars->fieldEA;
+        g_fieldEntity.field_0x11C = g_fieldVars->fieldEC;
+        g_fieldEntity.field_0x11E = g_fieldVars->fieldEE;
     }
 
-    D_800704A8.slots[0].mode = 0;
-    D_800704A8.slots[0].submode = 0;
-    D_800704A8.slots[0].param = D_800704A8.entityIndex[0];
+    g_fieldEntity.slots[0].mode = 0;
+    g_fieldEntity.slots[0].submode = 0;
+    g_fieldEntity.slots[0].param = g_fieldEntity.entityIndex[0];
 }

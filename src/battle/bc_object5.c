@@ -3,6 +3,7 @@
 #include "gamestate.h"
 #include "battle/bc_object5.h"
 
+
 s32 func_800AA68C(s32 arg0, u32 arg1, u32 arg2) {
     switch (arg1) {
         case 0:
@@ -199,11 +200,11 @@ s32 func_800AA980(s32 arg0, s32 arg1) {
 
 s32 func_800AA9C8(s32 arg0, s32 arg1) {
     if (arg0 == 0) {
-        return (D_8007809A >> arg1) & 1;
+        return (g_gameState.mainData.partyLockFlag >> arg1) & 1;
     }
 
     if (arg0 == 3) {
-        return ((D_8007809A >> arg1) & 1) ^ 1;
+        return ((g_gameState.mainData.partyLockFlag >> arg1) & 1) ^ 1;
     }
 }
 
@@ -246,22 +247,22 @@ s32 func_800AAA50(s32 arg0, s32 arg1, s32 bit) {
     return 0;
 }
 
-s32 func_800AAA9C(s32 arg0, u32 arg1, BattleEntityData* arg2) {
+s32 func_800AAA9C(s32 arg0, u32 arg1, BattleEntity* arg2) {
     if (arg1 < 16) {
-        if (arg0 == 0 && ((arg2->unk80 >> arg1) & 1)) {
+        if (arg0 == 0 && ((arg2->status >> arg1) & 1)) {
             return 1;
         }
         
-        if (arg0 == 3 && !((arg2->unk80 >> arg1) & 1)) {
+        if (arg0 == 3 && !((arg2->status >> arg1) & 1)) {
             return 1;
         }
     }
     
-    else if (arg0 == 0 && (arg2->unk8 & (1 << (arg1 - 16)))) {
+    else if (arg0 == 0 && (arg2->flags & (1 << (arg1 - 16)))) {
         return 1;
     } 
     
-    else if (arg0 == 3 && !(arg2->unk8 & (1 << (arg1 - 16)))) {
+    else if (arg0 == 3 && !(arg2->flags & (1 << (arg1 - 16)))) {
         return 1;  
     }
         
@@ -269,23 +270,23 @@ s32 func_800AAA9C(s32 arg0, u32 arg1, BattleEntityData* arg2) {
     return 0;
 }
 
-s32 func_800AAB50(s32 arg0, u32 arg1, BattleEntityData* arg2) {
+s32 func_800AAB50(s32 arg0, u32 arg1, BattleEntity* arg2) {
     switch (arg1) {
         case 1 ... 9:
-            return func_800AA68C(arg2->unk18, arg0, (arg2->unk1C / 10) * arg1);
+            return func_800AA68C(arg2->currentHp, arg0, (arg2->maxHp / 10) * arg1);
         
         case 10:
-            return func_800AA68C(arg2->unk18, arg0, arg2->unk1C >> 2);        
+            return func_800AA68C(arg2->currentHp, arg0, arg2->maxHp >> 2);        
 
         default:
-            return func_800AA68C(arg2->unk18, arg0, arg1);
+            return func_800AA68C(arg2->currentHp, arg0, arg1);
     }
 }
 
 s32 func_800AABEC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
     if (arg4 != 0 && arg1 == 0) {
         if (D_800ED148.entities[arg3].controlFlags & 1) {
-            BattleEntityData* var_a2 = (BattleEntityData*)&D_800ED148.entities[arg3].entityData;
+            BattleEntity* var_a2 = &D_800ED148.entities[arg3];
             arg2 += func_800AAA9C(arg0, arg1, var_a2);
         }
         
@@ -294,7 +295,7 @@ s32 func_800AABEC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
 
     else if (D_800ED148.entities[arg3].controlFlags & 1) {
         if (!(D_800ED148.entities[arg3].status & 1)) {
-            BattleEntityData* var_a2 = (BattleEntityData*)&D_800ED148.entities[arg3].entityData;
+            BattleEntity* var_a2 = &D_800ED148.entities[arg3];
             if (arg4 == 0) {
                 arg2 += func_800AAB50(arg0, arg1, var_a2);
             } 
@@ -334,7 +335,7 @@ s32 func_800AACD0(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 
         default:
             for (i = 0; i < 7; i++) {
-                if (D_800ED148.entities[i].linkedIdx == arg0) {
+                if (D_800ED148.entities[i].comFileId == arg0) {
                     result = func_800AABEC(var_s2, arg2, result, i, arg3);
                 }
             }
@@ -358,7 +359,7 @@ s32 func_800AAE10(s32 arg0, s32 arg1, s32 arg2) {
             return arg1;  
         }
         
-         arg1 += func_800AAA9C(0, arg0, &D_800ED148.entities[arg2].entityData);
+         arg1 += func_800AAA9C(0, arg0, &D_800ED148.entities[arg2]);
     }
     
 
@@ -394,10 +395,10 @@ s32 func_800AAE98(s32 arg0) {
 */
 
 void func_800AAF48(s32 arg0) {
-    BattleEntityData* temp_v0;
+    BattleEntity* temp_v0;
 
     temp_v0 = func_800AA57C(200, arg0);
-    temp_v0->unk18 = temp_v0->unk1C;
+    temp_v0->currentHp = temp_v0->maxHp;
 }
 
 /**
@@ -410,11 +411,11 @@ void func_800AAF48(s32 arg0) {
 * @param a1 Signed 16-bit offset to add.
 */
 
-void func_800AAF70(s32 arg0, s16 arg1) {
-    BattleEntityData* temp_v0;
+void func_800AAF70(s32 arg0, s16 hpQuantity) {
+    BattleEntity* temp_v0;
 
     temp_v0 = func_800AA57C(200, arg0);
-    temp_v0->unk18 += arg1;
+    temp_v0->currentHp += hpQuantity;
 }
 
 /**
@@ -446,7 +447,7 @@ void func_800AB054(s32 arg0) {
     TaskEntry* td = &D_800ED148.taskData[arg0];
     
     if (td->timer == 0) {
-        func_8009AF3C(td->unk4, 0x1E, 3, 0xF0, 0);
+        func_8009AF3C(td->unk4, 30, 3, 240, 0);
         td->done = 1;
     }
     
@@ -608,19 +609,13 @@ void func_800AB3E0(void) {
 * @param a2 Y position for display.
 */
 
-void func_800AB3FC(s32 a0, s32 a1, s32 a2) {
-    volatile u8 *base = (u8 *)&D_800ED148;
-    u8 *entity = (u8 *)base + a0 * 0xD0;
-    s32 sub = *(s32 *)(entity + 0x14);
-    s32 tbl = *(s32 *)sub;
-    s32 offTab = *(s32 *)(tbl + 8) + tbl;
-    s32 dataOff = *(s32 *)(tbl + 0xC);
-    s32 result;
-    a1 = a1 * 2 + offTab;
-    result = func_800A9784(*(u16 *)a1, dataOff + tbl);
-    result = func_800B0398(result);
-    func_8009AF3C(result, a2, 3, 0xF0, 0);
+void func_800AB3FC(s32 arg0, s32 arg1, s32 arg2) {
+    Unk4Struct* temp_v1;
+
+    temp_v1 = *D_800ED148.entities[arg0].monsterAiSection;
+    func_8009AF3C(func_800B0398(func_800A9784(*(arg1 + GET_OFFSET(u16, temp_v1, temp_v1->unk8)),GET_OFFSET(s32, temp_v1, temp_v1->unkC))), arg2, 3, 240, 0);
 }
+
 
 /**
 * @brief Call func_800AB3FC with a fixed duration of 0x1E.

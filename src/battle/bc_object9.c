@@ -1,9 +1,10 @@
 #include "common.h"
+#include "battle.h"
 #include "psxsdk/libgte.h"
 #include "battle/bc_object8.h"
 #include "battle/bc_object9.h"
 #include "battle/bc_object10.h"
-#include "battle.h"
+
 
 extern u8 D_800EF72C[];
 extern u8 D_800F05C8[];
@@ -74,16 +75,16 @@ void func_800B54A0(s32 a0, s32 a1, s32 a2) {
 }
 
 /**
- * @brief Compute coordinate differences and call func_80041E84.
+ * @brief Compute coordinate differences and call ratan2.
  *
  * @param a0 Pointer to first coordinate pair (s16 x at +0, s16 y at +4).
  * @param a1 Pointer to second coordinate pair (s16 x at +0, s16 y at +4).
- * @return Result of func_80041E84(dx, dy).
+ * @return Result of ratan2(dx, dy).
  */
 s32 func_800B5528(s32 a0, s32 a1) {
     s32 dx = *(s16 *)a0 - *(s16 *)a1;
     s32 dy = *(s16 *)(a0 + 4) - *(s16 *)(a1 + 4);
-    return func_80041E84(dx, dy);
+    return ratan2(dx, dy);
 }
 
 INCLUDE_ASM("asm/ovl/battle/nonmatchings/bc_object9", func_800B555C);

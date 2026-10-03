@@ -4,6 +4,16 @@
 #include "psxsdk/libc.h"
 #include "battle.h"
 #include "btl_anim.h"
+#include "btl_anim_packet.h"
+#include "ui/icon.h"
+#include "ui/countdown.h"
+#include "input/vibration.h"
+#include "ui/gauge.h"
+#include "ui/seed_rank.h"
+#include "input/button_remap.h"
+#include "ui/window.h"
+#include "ui/dialog.h"
+#include "ui/text.h"
 #include "thread.h"
 
 
@@ -13,16 +23,11 @@ void initBattleSubsystems(void);
 s32 func_80047384(void);
 void func_800472E4(void);
 void func_800472F4(void);
-s32 getAnimFrameParam(s32, s32);
-u16 remapControllerInput(s32);
-s32 getAnimFrameStatusFlags(s32, s32);
-s32 func_8002CF54(s32);
-void decrementSfxCounter(void);
-s32 GetActiveFlag(s32);
-void dispatchBattleEntity(s32, s32, s32);
-void updateCameraVibrate(void);
-void updatePaletteTransition(void);
-void stepAnimEntries(void);
+s32 getPadReadButtons(s32, s32);
+s32 getPadReadRepeat(s32, s32);
+static s32 getPadReadByte(s32 idx, s32 param, s32 frameOffset);
+static s32 getPadReadType(s32 idx, s32 frameOffset);
+static void resetPadInput(s32 idx, s32 buttons);
 
 extern u8 g_animInitialized;
 extern u8 g_animFlag;
@@ -33,46 +38,42 @@ extern u8 g_cardFilename[];  /* encoded save filename (max 8 chars + null) */
 extern s16 g_cardFileSlot;   /* save slot index */
 extern u8 g_cardFileType;    /* card/save type */
 extern u8 g_cardFileActive;
-extern u8 g_animCurveFadeOut[];
-extern u8 g_animCurveFadeIn[];
 extern DRAWENV *g_activeDrawEnv;
-extern BattleDisplayEntity g_battleEntities[];
 extern u8 g_paletteIndices[];
 
 /**
- * @brief Set or clear opacity of a battle animation entity.
- * @param idx Entity index (masked to 0 or 1).
- * @param val If nonzero, set to 0xFF (visible); otherwise 0 (hidden).
+ * @brief Turn a pad port's vibration on or off.
+ * @param idx Port index (masked to 0 or 1).
+ * @param val Nonzero for on.
  */
-void setAnimEntityOpacity(s32 idx, s32 val) {
-    BattleAnimEntity *entry = &g_battleAnims.entities[idx & 1];
+void setPadVibration(s32 idx, s32 val) {
+    PadPort *port = &g_engine.ports[idx & 1];
     if (val != 0) {
-        entry->opacity = 0xFF;
+        port->vibrationMask = 0xFF;
     } else {
-        entry->opacity = 0;
+        port->vibrationMask = 0;
     }
 }
 
 
 /**
- * @brief Set animation parameters on a battle entity.
+ * @brief Set a pad port's motor levels.
  *
- * Conditionally updates field07 and field06 (skipped if < 0),
- * then marks the entity active by setting field0A to 1.
+ * Updates motor[1] and motor[0] (skipped if < 0), then sets field0A to 1.
  *
- * @param idx Entity index (masked to 0 or 1).
- * @param param7 Value for field07 (-1 to skip).
- * @param param6 Value for field06 (-1 to skip).
+ * @param idx Port index (masked to 0 or 1).
+ * @param motor1 Level for motor[1] (-1 to skip).
+ * @param motor0 Level for motor[0] (-1 to skip).
  */
-void setAnimEntityParams(s32 idx, s32 param7, s32 param6) {
-    BattleAnimEntity *entry = &g_battleAnims.entities[idx & 1];
-    if (param7 >= 0) {
-        entry->field07 = param7;
+void setPadMotors(s32 idx, s32 motor1, s32 motor0) {
+    PadPort *port = &g_engine.ports[idx & 1];
+    if (motor1 >= 0) {
+        port->motor[1] = motor1;
     }
-    if (param6 >= 0) {
-        entry->field06 = param6;
+    if (motor0 >= 0) {
+        port->motor[0] = motor0;
     }
-    entry->field0A = 1;
+    port->field0A = 1;
 }
 
 
@@ -95,7 +96,7 @@ s16 getAnimGlobalCoord(s32 idx, s32 axis) {
     } else {
         idx = 0;
     }
-    return g_battleAnims.globalCoords[slot][idx];
+    return g_engine.globalCoords[slot][idx];
 }
 
 
@@ -107,29 +108,29 @@ s16 getAnimGlobalCoord(s32 idx, s32 axis) {
  */
 void setAnimGlobalCoords(s32 idx, s16 x, s16 y) {
     idx &= 1;
-    g_battleAnims.globalCoords[idx][0] = x;
-    g_battleAnims.globalCoords[idx][1] = y;
+    g_engine.globalCoords[idx][0] = x;
+    g_engine.globalCoords[idx][1] = y;
 }
 
 
 /**
- * @brief Read a parameter from an animation frame slot.
- * @param idx Entity index (masked to 0 or 1).
- * @param param Parameter index (clamped to [0,3]).
- * @param frameOffset Frame counter offset to subtract.
- * @return Parameter value (u8), or -1 if slot is inactive or wrong type.
+ * @brief Read a data byte after the buttons in a past read on the port linked to port @p idx.
+ * @param idx Port index (masked to 0 or 1).
+ * @param param Byte index (clamped to [0,3]).
+ * @param frameOffset How many reads back to look.
+ * @return The byte, or -1 if that read failed or its controller type is not 1.
  */
-s32 getAnimFrameSlotParam(s32 idx, s32 param, s32 frameOffset) {
-    BattleAnimEntity *entity;
+static s32 getPadReadByte(s32 idx, s32 param, s32 frameOffset) {
+    PadPort *port;
     AnimFrame *frame;
     s32 frameSlot;
     s32 result;
 
     idx &= 1;
-    entity = &g_battleAnims.entities[g_battleAnims.entities[idx].linkedIdx];
-    frameSlot = (entity->frameCounter - frameOffset) & 7;
+    port = &g_engine.ports[g_engine.ports[idx].linkedIdx];
+    frameSlot = (port->frameCounter - frameOffset) & 7;
     result = -1;
-    frame = &entity->frames[frameSlot];
+    frame = &port->frames[frameSlot];
 
     if (frame->field00 == 0) {
         param = CLAMP(param, 0, 3);
@@ -143,24 +144,24 @@ s32 getAnimFrameSlotParam(s32 idx, s32 param, s32 frameOffset) {
 
 
 /**
- * @brief Check if battle animation entity 0 has an active frame.
- * @return 1 if entity 0 has an active frame, 0 otherwise.
+ * @brief Check whether port 0's latest read succeeded.
+ * @return 1 if it did, 0 otherwise.
  */
-s32 isAnimActive(void) {
-    return getAnimFrameType(0, 0) >= 0;
+s32 isPadConnected(void) {
+    return getPadReadType(0, 0) >= 0;
 }
 
 
 /**
- * @brief Get the type of an animation frame slot, with optional sync.
- * @param idx Entity index (bit 0 selects entity).
- * @param frameOffset Frame counter offset to subtract.
- * @return Frame type (field01 >> 4), or -1 if slot is inactive.
+ * @brief Get the controller type of a past read on the port linked to port @p idx.
+ * @param idx Port index (bit 0 selects the port).
+ * @param frameOffset How many reads back to look.
+ * @return The ID byte's high nibble, or -1 if that read failed.
  */
-s32 getAnimFrameType(s32 idx, s32 frameOffset) {
+static s32 getPadReadType(s32 idx, s32 frameOffset) {
     s32 syncFlag;
     s32 slot;
-    BattleAnimEntity *entity;
+    PadPort *port;
     AnimFrame *frame;
     s32 frameSlot;
 
@@ -170,9 +171,9 @@ s32 getAnimFrameType(s32 idx, s32 frameOffset) {
     }
 
     slot = idx & 1;
-    entity = &g_battleAnims.entities[g_battleAnims.entities[slot].linkedIdx];
-    frameSlot = (entity->frameCounter - frameOffset) & 7;
-    frame = &entity->frames[frameSlot];
+    port = &g_engine.ports[g_engine.ports[slot].linkedIdx];
+    frameSlot = (port->frameCounter - frameOffset) & 7;
+    frame = &port->frames[frameSlot];
 
     if (syncFlag == 0) {
         func_800472F4();
@@ -186,44 +187,44 @@ s32 getAnimFrameType(s32 idx, s32 frameOffset) {
 
 
 /**
- * @brief Set an s16 value in the unk10 array of both battle animation entities.
- *
- * Writes @p value to both entities' unk10[index].
- *
+ * @brief Set the button mask of one auto-repeat channel on both pad ports.
  * @param unused Unused parameter.
- * @param index Index into the unk10 array (0-3).
- * @param value Value to store.
+ * @param channel Auto-repeat channel (0-3).
+ * @param mask Buttons the channel repeats.
  */
-void setAnimUnk10Both(s32 unused, s32 index, s16 value) {
+void setPadRepeatMask(s32 unused, s32 channel, s32 mask) {
     int new_var;
     new_var = 1;
-    g_battleAnims.entities[0].unk10[index] = value;
-    g_battleAnims.entities[new_var].unk10[index] = value;
+    g_engine.ports[0].unk10[channel] = mask;
+    g_engine.ports[new_var].unk10[channel] = mask;
 }
 
 
 /**
- * @brief Initialize a linked battle animation entity.
- * @param idx Entity index (selects via linkedIdx).
- * @param frameId Frame ID to set in each frame's field02.
+ * @brief Reset the input state of the port linked to port @p idx.
+ *
+ * Restarts its read ring and auto-repeat countdowns, and clears all eight reads.
+ *
+ * @param idx Port index (selects via linkedIdx).
+ * @param buttons Held buttons to store in each read.
  */
-void resetAnimEntity(s32 idx, s32 frameId) {
+static void resetPadInput(s32 idx, s32 buttons) {
     AnimFrame *fp;
     s32 fid;
-    BattleAnimEntity *entity;
+    PadPort *port;
     s32 i;
 
-    entity = &g_battleAnims.entities[g_battleAnims.entities[idx].linkedIdx];
-    entity->frameCounter = 0;
-    entity->field0A = 0;
-    entity->field0C = g_battleAnims.defaultColor;
-    entity->field0D = g_battleAnims.defaultColor;
-    entity->field0E = g_battleAnims.defaultColor;
-    entity->field0F = g_battleAnims.defaultColor;
+    port = &g_engine.ports[g_engine.ports[idx].linkedIdx];
+    port->frameCounter = 0;
+    port->field0A = 0;
+    port->field0C = g_engine.repeatDelays.b.lo;
+    port->field0D = g_engine.repeatDelays.b.lo;
+    port->field0E = g_engine.repeatDelays.b.lo;
+    port->field0F = g_engine.repeatDelays.b.lo;
 
-    fid = frameId;
+    fid = buttons;
     for (i = 0; 8 > i; i++) {
-        AnimFrame *frame = &entity->frames[i];
+        AnimFrame *frame = &port->frames[i];
         frame->field00 = 0;
         frame->field01 = 0;
         fp = frame;
@@ -243,27 +244,28 @@ void resetAnimEntity(s32 idx, s32 frameId) {
 
 
 /**
- * @brief Initialize a battle entity's color fields from the global default.
+ * @brief Reset a pad port's auto-repeat countdowns and reads.
  *
- * Sets all four color fields (0C-0F) to g_battleAnims.defaultColor,
- * then calls resetAnimEntity to reset frame state.
+ * Sets field0C-0F, the per-channel pad auto-repeat countdowns (func_80027038
+ * ticks them), to the restart delay g_engine.repeatDelays.b.lo, then
+ * calls resetPadInput to clear its reads.
  *
- * @param idx Entity index (0 or 1).
+ * @param idx Port index (0 or 1).
  */
-void initAnimEntityColor(s32 idx) {
-    BattleAnimEntity *entity = &g_battleAnims.entities[idx];
-    entity->field0C = g_battleAnims.defaultColor;
-    entity->field0D = g_battleAnims.defaultColor;
-    entity->field0E = g_battleAnims.defaultColor;
-    entity->field0F = g_battleAnims.defaultColor;
-    resetAnimEntity(idx, 0);
+void initPadInput(s32 idx) {
+    PadPort *port = &g_engine.ports[idx];
+    port->field0C = g_engine.repeatDelays.b.lo;
+    port->field0D = g_engine.repeatDelays.b.lo;
+    port->field0E = g_engine.repeatDelays.b.lo;
+    port->field0F = g_engine.repeatDelays.b.lo;
+    resetPadInput(idx, 0);
 }
 
 
 /**
  * @brief Initialize battle animation state and wait for completion.
  *
- * Sets g_animInitialized to 1, initializes both animation slots via resetAnimEntity,
+ * Sets g_animInitialized to 1, initializes both pad ports via resetPadInput,
  * triggers a fade via func_80039764(3), then polls func_80027360 up to 24
  * frames. Finishes with VSync(2).
  */
@@ -272,7 +274,7 @@ void initAnimStateAndWait(void) {
 
     g_animInitialized = 1;
     for (i = 0; i < 2; i++) {
-        resetAnimEntity(i, 0);
+        resetPadInput(i, 0);
     }
     func_80039764(3);
     for (i = 0; i < 24; i++) {
@@ -285,13 +287,13 @@ void initAnimStateAndWait(void) {
 }
 
 
-/** @brief Initializes g_animInitialized to 0, calls func_80039764(0), then loops twice calling resetAnimEntity(i, 0). */
+/** @brief Initializes g_animInitialized to 0, calls func_80039764(0), then loops twice calling resetPadInput(i, 0). */
 void resetAnimState(void) {
     s32 i;
     g_animInitialized = 0;
     func_80039764(0);
     for (i = 0; i < 2; i++) {
-        resetAnimEntity(i, 0);
+        resetPadInput(i, 0);
     }
 }
 
@@ -324,11 +326,11 @@ void setAnimFlag(s32 value) {
 
 /**
  * @brief Initialize or reset the CD audio/streaming subsystem state.
- * @note Calls several initialization functions and resets a counter at g_battleAnims + 0x9C4 to 0.
- *       Passes two g_battleAnims buffer pointers (offsets 0x188 and 0x1AC) to func_8003BC24.
+ * @note Calls several initialization functions and resets a counter at g_engine + 0x9C4 to 0.
+ *       Passes two g_engine buffer pointers (offsets 0x188 and 0x1AC) to func_8003BC24.
  */
 void initCdAnimSubsystem(void) {
-    BattleAnimState *bas = &g_battleAnims;
+    EngineState *bas = &g_engine;
     func_800982B8();
     func_8003BC24(bas->cdBufA, bas->cdBufB);
     cdInitHandlerWrapper();
@@ -338,7 +340,7 @@ void initCdAnimSubsystem(void) {
 
 
 /**
- * @brief Initialize GPU display and clear battle animation state fields.
+ * @brief Initialize GPU display and clear engine state fields.
  *
  * Calls GsInitGraph, GsDefDispBuff, and initCdAnimSubsystem, then
  * resets display state fields.
@@ -347,10 +349,10 @@ void initBattleDisplay(void) {
     func_800982D8();
     func_800980D0();
     initCdAnimSubsystem();
-    g_battleAnims.field6FC = 0;
-    g_battleAnims.field9C2 = 0x4611;
-    g_battleAnims.field9C8 = 0;
-    g_battleAnims.field9CC = 0;
+    g_engine.field6FC = 0;
+    g_engine.field9C2 = 0x4611;
+    g_engine.field9C8 = 0;
+    g_engine.field9CC = 0;
 }
 
 
@@ -387,7 +389,7 @@ void convertClutPalette(u16 *clut) {
 
         g &= 0xFF;
         b &= 0xFF;
-        g_battleAnims.palette[i] = (r | (g << 8) | (b << 16)) | 0x40000000;
+        g_engine.palette[i] = (r | (g << 8) | (b << 16)) | 0x40000000;
     }
 }
 
@@ -418,7 +420,7 @@ void loadBattleTimImage(Tim *data) {
     rect = clut->rect;
     rect.x = 0x100;
     rect.y = 0xE0;
-    convertClutPalette(clut->data);
+    convertClutPalette((u16 *)clut->data); /* the CLUT's 16-bit colours */
     LoadImage(&rect, clut->data);
     DrawSync(0);
 
@@ -1791,9 +1793,9 @@ void shutdownCardSubsystem(void) {
 }
 
 
-/** @brief Calls func_80027448 and cdDisableInterruptWrapper in sequence. */
+/** @brief Calls settlePadPorts and cdDisableInterruptWrapper in sequence. */
 void initBattleSubsystems(void) {
-    func_80027448();
+    settlePadPorts();
     cdDisableInterruptWrapper();
 }
 
@@ -1863,7 +1865,7 @@ done:
 /**
  * @brief Apply GPU draw area/offset setup if the card file overlay is active.
  *
- * When g_cardFileActive is set, calls func_8002E8DC to process the overlay
+ * When g_cardFileActive is set, calls drawDecodedText to process the overlay
  * data, then emitDrawEnvPackets to emit draw area/offset packets into the OT.
  * Returns the packet pointer unchanged if inactive.
  *
@@ -1871,10 +1873,10 @@ done:
  * @param pkt  Current GPU packet pointer.
  * @return Updated packet pointer, or original if inactive.
  */
-s32 transformValueIfActive(s32 ot, s32 pkt) {
+void *transformValueIfActive(void *ot, void *pkt) {
     if (g_cardFileActive != 0) {
-        s32 result = func_8002E8DC(ot, pkt, g_cardFileSlot, g_cardFileType, (u8 *)g_cardFilename, 7);
-        pkt = (s32)emitDrawEnvPackets((P_TAG *)ot, (u8 *)result);
+        TSPRT *result = drawDecodedText(ot, pkt, g_cardFileSlot, g_cardFileType, g_cardFilename, 7);
+        pkt = emitDrawEnvPackets(ot, (u8 *)result);
     }
     return pkt;
 }
@@ -2000,12 +2002,12 @@ void copyDisplayRect(RECT *dst) {
 
 /**
  * @brief Copy the draw offset from the active draw environment.
- * @param dst Destination vector for the display coordinates.
+ * @param ofs Receives the offset's x and y, as SetDrawOffset takes them.
  */
-void copyDisplayCoords(DVECTOR *dst) {
+void copyDisplayCoords(u16 *ofs) {
     DRAWENV *env = g_activeDrawEnv;
-    dst->vx = env->dispX;
-    dst->vy = env->dispY;
+    ofs[0] = env->ofs[0];
+    ofs[1] = env->ofs[1];
 }
 
 
@@ -2032,7 +2034,7 @@ u8 *emitDrawEnvPackets(P_TAG *ot, u8 *pkt) {
     pkt += 0xC;
 
     offset = (DR_OFFSET *)pkt;
-    SetDrawOffset(offset, &rect);
+    SetDrawOffset(offset, (u16 *)&rect); /* the clip rect's x and y are the offset */
     addPrim(ot, offset);
     pkt += 0xC;
 
@@ -2043,13 +2045,13 @@ u8 *emitDrawEnvPackets(P_TAG *ot, u8 *pkt) {
 /**
  * @brief Swap the active display list buffer and clear the new OT.
  *
- * Toggles between two display list buffers at g_battleAnims+0x640 and
- * g_battleAnims+0x698. Stores the new active buffer at +0x6F0, clears
+ * Toggles between two display list buffers at g_engine+0x640 and
+ * g_engine+0x698. Stores the new active buffer at +0x6F0, clears
  * its ordering table (18 entries), and copies the GPU packet pointer
  * from offset +0x54 to offset +0x00.
  */
 void swapDisplayList(void) {
-    BattleAnimState *base = &g_battleAnims;
+    EngineState *base = &g_engine;
     DisplayListBuf *buf;
     DisplayListBuf *active;
 
@@ -2070,7 +2072,7 @@ void swapDisplayList(void) {
  * Identical logic to swapDisplayList.
  */
 void swapDisplayList2(void) {
-    BattleAnimState *base = &g_battleAnims;
+    EngineState *base = &g_engine;
     DisplayListBuf *buf;
     DisplayListBuf *active;
 
@@ -2113,23 +2115,23 @@ void processBattleAnimFrames(s32 frameCount, s32 mode) {
     if (mode == 1) {
         func_800472E4();
         for (i = count; i >= 0; i--) {
-            param = remapControllerInput(getAnimFrameParam(0, i) & 0xFFFF) & 0xFFFF;
+            param = applyButtonRemapTranslation(getPadReadButtons(0, i) & 0xFFFF) & 0xFFFF;
             if ((param & 0xF000) == 0) {
                 val = func_80027DB4(0, PAD_AXIS_X, i);
                 if (val >= 0) {
                     param |= func_80027CF8(0, val - 128, func_80027DB4(0, PAD_AXIS_Y, i) - 128);
                 }
             }
-            param |= remapControllerInput(func_80027A58(0, i) & 0xFFFF) << 16;
+            param |= applyButtonRemapTranslation(getPadReadPressed(0, i) & 0xFFFF) << 16;
             j = i;
             frameData[j] = param;
-            statusData[j] = remapControllerInput(getAnimFrameStatusFlags(0, j) & 0xFFFF) & 0xFFFF;
+            statusData[j] = applyButtonRemapTranslation(getPadReadRepeat(0, j) & 0xFFFF) & 0xFFFF;
         }
         func_800472F4();
     } else {
         func_800472E4();
-        param = remapControllerInput(getAnimFrameParam(0, 0) & 0xFFFF) & 0xFFFF;
-        upperBits = remapControllerInput(func_80027A58(0, 0) & 0xFFFF) << 16;
+        param = applyButtonRemapTranslation(getPadReadButtons(0, 0) & 0xFFFF) & 0xFFFF;
+        upperBits = applyButtonRemapTranslation(getPadReadPressed(0, 0) & 0xFFFF) << 16;
         val = func_80027DB4((0, 0), PAD_AXIS_X, 0);
         if (((param & 0xF000) == 0) && (val >= 0)) {
             param |= func_80027CF8(0, val - 128, func_80027DB4(0, PAD_AXIS_Y, 0) - 128);
@@ -2143,7 +2145,7 @@ void processBattleAnimFrames(s32 frameCount, s32 mode) {
                 } else {
                     frameData[i] = param;
                 }
-                statusData[i] = func_8002CF54(param);
+                statusData[i] = autoRepeatPad(param);
             }
         }
     }
@@ -2153,15 +2155,15 @@ void processBattleAnimFrames(s32 frameCount, s32 mode) {
         param = frameData[count];
         frameVal = param;
         statusVal = val;
-        decrementSfxCounter();
+        tickTextBlink();
         for (j = 0; j < 8; j++) {
             if (GetActiveFlag(j)) {
                 dispatchBattleEntity(j, frameVal, statusVal);
             }
         }
-        updateCameraVibrate();
-        updatePaletteTransition();
-        stepAnimEntries();
+        updateCountdownBlink();
+        updateSeedRankNotification();
+        stepGauges();
         count--;
     }
 }
@@ -2173,7 +2175,7 @@ void processBattleAnimFrames(s32 frameCount, s32 mode) {
  */
 void renderAndUpdateDisplay(s32 frameCount) {
     processBattleAnimFrames(frameCount, 0);
-    advanceBattleTimer(frameCount);
+    advanceVibrationClock(frameCount);
 }
 
 
@@ -2191,7 +2193,7 @@ void renderDisplay(s32 frameCount) {
  * @return The pktAlloc field of the active display list buffer.
  */
 s32 getDisplayListHead(void) {
-    return g_battleAnims.active->pktAlloc;
+    return g_engine.active->pktAlloc;
 }
 
 
@@ -2200,7 +2202,7 @@ s32 getDisplayListHead(void) {
  * @return The pktBase field of the active display list buffer.
  */
 s32 getDisplayListPacketPtr(void) {
-    return g_battleAnims.active->pktBase;
+    return g_engine.active->pktBase;
 }
 
 
@@ -2218,9 +2220,9 @@ void storeGpuPacket(u32 pkt) {
     DisplayListBuf *buf;
     u32 limit;
 
-    buf = g_battleAnims.active;
+    buf = g_engine.active;
     buf->pktAlloc = pkt;
-    limit = g_battleAnims.active->pktLimit;
+    limit = g_engine.active->pktLimit;
 
     if (limit < pkt) {
         if (pkt <= 0x801AFFFFU) {
@@ -2232,7 +2234,7 @@ void storeGpuPacket(u32 pkt) {
 
 /** @brief Returns the ordering table of the active display list buffer. */
 s32 getDisplayListOtBase(void) {
-    return (s32)g_battleAnims.active->ot;
+    return (s32)g_engine.active->ot;
 }
 
 
@@ -2249,25 +2251,24 @@ s32 getDisplayListOtBase(void) {
 s32 renderBattleDisplayList(s32 *colorTag) {
     DisplayListBuf *buf;
     u32 *ot;
-    s32 head;
+    u8 *head;
     s32 savedGp;
     s32 result;
 
     GP_SAVE_SCRATCH(savedGp);
 
     swapDisplayList();
-    buf = g_battleAnims.active;
-    head = getDisplayListHead();
-    head = func_800302DC(&buf->ot[1], (u8 *)head);
-    head = func_80031364((s32)&buf->ot[14], head);
-    head = transformValueIfActive((s32)&buf->ot[13], head);
-    head = renderAnimOverlay(&buf->ot[13], (u8 *)head);
+    buf = g_engine.active;
+    head = (u8 *)getDisplayListHead();
+    head = drawCountdown(&buf->ot[1], head);
+    head = drawSeedRankNotification(&buf->ot[14], head);
+    head = transformValueIfActive(&buf->ot[13], head);
+    head = drawGauges(&buf->ot[13], head);
     ot = buf->ot;
-    head = func_8002BF24((s32)ot, head);
-    storeGpuPacket(head + sizeof(buf->ot));
+    storeGpuPacket((u32)(func_8002BF24(ot, head) + sizeof(buf->ot)));
 
     setaddr(&ot[17], getaddr(colorTag));
-    setaddr(colorTag, (s32)ot);
+    setaddr(colorTag, ot);
 
     GP_RESTORE_RET(savedGp, result);
     return result;
@@ -2285,19 +2286,19 @@ s32 renderBattleDisplayList(s32 *colorTag) {
  */
 s32 addPrimitive(s32 *prim) {
     u32 *ot;
-    s32 head;
+    u8 *head;
     s32 savedGp;
     s32 result;
 
     GP_SAVE_SCRATCH(savedGp);
 
-    ot = g_battleAnims.active->ot;
-    head = getDisplayListHead();
-    head = func_8002BF24((s32)ot, head);
-    storeGpuPacket(head);
+    ot = g_engine.active->ot;
+    head = (u8 *)getDisplayListHead();
+    head = func_8002BF24(ot, head);
+    storeGpuPacket((u32)head);
 
     setaddr(&ot[17], getaddr(prim));
-    setaddr(prim, (s32)ot);
+    setaddr(prim, ot);
 
     GP_RESTORE_RET(savedGp, result);
     return result;
@@ -2344,7 +2345,7 @@ void buildAnimEasingCurves(void)
  *
  * Sets up display list buffers, computes half-size offsets for double
  * buffering, then initializes all battle subsystems: entities, SFX,
- * GPU colors, camera, command entries, transitions, and animation entries.
+ * GPU colors, camera, command entries, transitions, and the gauges.
  *
  * @param vramBase Display buffer base address in VRAM.
  * @param vramSize Display buffer total size (halved internally for double buffering).
@@ -2355,179 +2356,31 @@ void initBattleAnimSystem(s32 vramBase, s32 vramSize)
     s32 half = vramSize / 2;
     s32 vramEnd = vramBase + half;
 
-    g_battleAnims.bufs[0].pktBase = vramBase;
-    g_battleAnims.bufs[1].pktBase = vramEnd;
-    g_battleAnims.halfSize = half;
+    g_engine.bufs[0].pktBase = vramBase;
+    g_engine.bufs[1].pktBase = vramEnd;
+    g_engine.halfSize = half;
 
     for (i = 0; i < 2; i++) {
-        g_battleAnims.bufs[i].pktLimit = g_battleAnims.bufs[i].pktBase + half - 0x800;
+        g_engine.bufs[i].pktLimit = g_engine.bufs[i].pktBase + half - 0x800;
     }
 
-    g_battleAnims.active = &g_battleAnims.bufs[1];
+    g_engine.active = &g_engine.bufs[1];
     swapDisplayList();
     initAllBattleEntities();
-    resetAllSfx();
-    setDefaultGpuColor();
-    buildGrayscaleGpuColor(0x1000);
-    setMenuColorIntensity(0x1000);
-    btlColorStub0234();
+    resetAllDialogs();
+    resetNextPageMarkerBrightness();
+    setNextPageMarkerBrightness(0x1000);
+    setMenuBrightness(BRIGHTNESS_NORMAL);
+    iconStub();
     buildAnimEasingCurves();
-    resetBattleCameraState();
-    initBattleCmdEntries();
-    setAnimEntityOpacity(0, 0);
-    setAnimEntityOpacity(1, 0);
-    btlColorStub1044();
-    initBattleTransition();
-    clearAnimEntries();
+    resetCountdownDisplay();
+    initVibration();
+    setPadVibration(0, 0);
+    setPadVibration(1, 0);
+    initButtonRemap();
+    resetSeedRankNotification();
+    resetGauges();
     setDigitBaseCode(((u8 *)getMenuString(0xB))[1]);
-    g_battleAnims.pad980[6] = 0;
+    g_engine.seedRankNotification.salaryEnabled = 0;
     g_cardFileActive = 0;
-}
-
-
-
-/**
- * @brief Get a pointer to a battle entity by index.
- * @param idx Entity index.
- * @return Pointer to the entity.
- */
-BattleDisplayEntity *getBattleEntity(s32 idx) {
-    return &g_battleEntities[idx];
-}
-
-/**
- * @brief Set a battle entity's animation speed, clamped to [3, 11].
- * @param idx Entity index.
- * @param val Value to set; clamped to minimum 3 and maximum 11.
- */
-void setBattleEntityAnimSpeed(s32 idx, s32 val) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    s32 v;
-    if (val >= 3) {
-        if (val < 12) {
-            v = val;
-        } else {
-            v = 11;
-        }
-    } else {
-        v = 3;
-    }
-    entity->animSpeed = v;
-}
-
-
-/**
- * @brief Get a battle entity's animation speed.
- * @param idx Entity index.
- * @return Animation speed value for the entity.
- */
-s32 getBattleEntityAnimSpeed(s32 idx) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    return entity->animSpeed;
-}
-
-
-/**
- * @brief Store a byte value into a battle entity's subFields array.
- * @param idx Entity index.
- * @param offset Index into the subFields array (0 or 1).
- * @param val Byte value to store.
- */
-void setBattleEntitySubField(s32 idx, s32 offset, s32 val) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    entity->subFields[offset] = val;
-}
-
-
-/**
- * @brief Get a byte from a battle entity's subFields array.
- *
- * Dead code — never called anywhere in the binary. The compiler shared the
- * g_battleEntities base address (v0) from the preceding setBattleEntitySubField
- * via cross-function register reuse, producing only 4 instructions. This
- * optimization cannot be reproduced from natural struct access, so pointer
- * math with `register` redeclaration is used to match.
- *
- * Original code:
- * @code
- * u8 getBattleEntitySubField(s32 idx, s32 offset) {
- *     BattleDisplayEntity *entity = &g_battleEntities[idx];
- *     return entity->subFields[offset];
- * }
- * @endcode
- *
- * @param idx Entity index (arrives pre-computed as entity pointer in v0).
- * @param offset Index into the subFields array.
- * @return Byte value at the given subField offset.
- */
-u8 getBattleEntitySubField(s32 idx, s32 offset) {
-    register idx;
-    return *((u8 *)idx + offset + 0x3A);
-}
-
-
-/**
- * @brief Set a battle entity's bounding rectangle.
- * @param idx Entity index.
- * @param src Source RECT to copy.
- */
-void setBattleEntityBoundRect(s32 idx, RECT *src) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    entity->boundRect = *src;
-}
-
-
-/**
- * @brief Set a battle entity's display rectangle with minimum size clamping.
- *
- * Copies src RECT into the entity's dispRect, then ensures the height
- * is at least 1 and the width is at least 2.
- *
- * @param idx Entity index.
- * @param src Source RECT to copy.
- */
-void setBattleEntityRectClamp(s32 idx, RECT *src) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    BattleDisplayEntity *ent2;
-    ent2 = entity;
-    ent2->dispRect = *src;
-    if (ent2->dispRect.h <= 0) {
-        entity->dispRect.h = 1;
-    }
-    if (entity->dispRect.w < 2) {
-        ent2->dispRect.w = 2;
-    }
-}
-
-
-/**
- * @brief Get a battle entity's bounding rectangle.
- * @param idx Entity index.
- * @param dst Destination RECT to copy into.
- */
-void getBattleEntityBoundRect(s32 idx, RECT *dst) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    *dst = entity->boundRect;
-}
-
-
-/**
- * @brief Get a battle entity's display rectangle.
- * @param idx Entity index.
- * @param dst Destination RECT to copy into.
- */
-void getBattleEntityDispRect(s32 idx, RECT *dst) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    *dst = entity->dispRect;
-}
-
-
-/**
- * @brief Get a battle entity's entity type.
- * @param idx Entity index.
- * @return Entity type value.
- */
-s32 getBattleEntityType(s32 idx) {
-    BattleDisplayEntity *entity = &g_battleEntities[idx];
-    return entity->entityType;
 }

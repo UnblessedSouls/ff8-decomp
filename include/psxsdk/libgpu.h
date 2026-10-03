@@ -106,6 +106,12 @@ typedef struct {
 /* Initialise a gouraud-shaded 4-vertex polygon (len=8 words, code=0x38). */
 #define setPolyG4(p)     setlen(p, 8),  setcode(p, 0x38)
 
+/* Initialise a tile primitive (len=3 words, code=0x60). */
+#define setTile(p) setlen(p, 3), setcode(p, 0x60)
+
+/* Initialise a flat line primitive (len=3 words, code=0x40). */
+#define setLineF2(p) setlen(p, 3), setcode(p, 0x40)
+
 /* Initialise a 1x1 tile primitive (len=2 words, code=0x68). */
 #define setTile1(p)      setlen(p, 2),  setcode(p, 0x68)
 
@@ -132,6 +138,17 @@ typedef struct {
 /* Pack a CLUT descriptor. */
 #define getClut(x, y) \
     (((y) << 6) | (((x) >> 4) & 0x3f))
+
+/* Pack a draw-mode command word (GP0 0xE1): dfe = drawing to the display
+ * area allowed, dtd = dithering on, tpage = a getTPage() value. */
+#define _get_mode(dfe, dtd, tpage) \
+    ((0xe1000000) | ((dtd) ? 0x0200 : 0) | \
+     ((dfe) ? 0x0400 : 0) | ((tpage) & 0x9ff))
+
+/* Fill in a DR_TPAGE: one word, the draw-mode command for tpage. */
+#define setDrawTPage(p, dfe, dtd, tpage) \
+    setlen(p, 1), \
+    ((u32 *)(p))[1] = _get_mode(dfe, dtd, tpage)
 
 /* Store a tpage / clut into a primitive's tpage / clut field. */
 #define setTPage(p, tp, abr, x, y) \
@@ -203,8 +220,7 @@ typedef struct {
  */
 typedef struct {
     RECT clip;
-    s16 dispX;
-    s16 dispY;
+    s16 ofs[2];
     RECT tw;
     u16 tpage;
     u8 dtd;
@@ -431,15 +447,24 @@ typedef struct {
     u16 w, h;                 /* +0x14: sprite dimensions */
 } TSPRT;
 
+/**
+ * @brief Set the tag length and draw-mode word of a TSPRT.
+ *
+ * The TSPRT counterpart of the SDK's setDrawTPage, which cannot be used on it:
+ * that one sets the length to 1, a TSPRT carries 5 words under its tag.
+ */
+#define setTSprt(p, dfe, dtd, tpage) \
+    (setlen(p, 5), (p)->drawMode = _get_mode(dfe, dtd, tpage))
+
 /* --- GPU function declarations --- */
 
-void ResetGraph(s32 mode);
+s32 ResetGraph(s32 mode);
 void SetGraphDebug(s32 level);
 s32 DrawSync(s32 mode);
 void SetDispMask(s32 mask);
 void ClearOTag(u32 *ot, s32 n);
 void ClearOTagR(u32 *ot, s32 n);
-void DrawOTag(void *p);
+void DrawOTag(u32 *p);
 void DrawPrim(void *p);
 void LoadImage(RECT *rect, u32 *data);
 void StoreImage(RECT *rect, u32 *data);
@@ -451,17 +476,24 @@ void SetDrawLoad(DR_LOAD *p, RECT *rect);
 void SetDrawEnv(DR_ENV *dr_env, DRAWENV *env);
 DRAWENV *SetDefDrawEnv(DRAWENV *env, s32 x, s32 y, s32 w, s32 h);
 DISPENV *SetDefDispEnv(DISPENV *env, s32 x, s32 y, s32 w, s32 h);
-void PutDrawEnv(void *env);
-void PutDispEnv(void *env);
-void ClearImage(void *rect, u8 r, u8 g, u8 b);
+DRAWENV *PutDrawEnv(DRAWENV *env);
+DISPENV *PutDispEnv(DISPENV *env);
+s32 ClearImage(RECT *rect, u8 r, u8 g, u8 b);
 void SetDrawStp(u32 *p, s32 dfe);
 void AddPrim(void *ot, void *p);
 void AddPrims(s32 *ot, void *p0, void *p1);
 void SetDrawArea(DR_AREA *p, RECT *rect);
-void SetDrawOffset(DR_OFFSET *p, RECT *rect);
+void SetDrawOffset(DR_OFFSET *p, u16 *ofs);
 s32 MoveImage(RECT *rect, s32 x, s32 y);
 s32 OpenTIM(u32 *addr);
 void *ReadTIM(void *timimg);
+/* Stop the GPU's list DMA: returns the next packet's address, 0 if nothing is being
+ * drawn, or -1 if the transfer in progress is not a list. */
+u32 *BreakDraw(void);
+/* Draw the list at @p insaddr, then resume the list BreakDraw stopped at @p contaddr. */
+void ContinueDraw(u32 *insaddr, u32 *contaddr);
+/* Poll the GPU up to @p max_count times: 0 once it is ready for commands, else -1. */
+s32 IsIdleGPU(s32 max_count);
 s32 GetODE(void);
 void SetSemiTrans(void *p, s32 abe);
 void SetShadeTex(void *p, s32 tge);
@@ -469,6 +501,7 @@ void SetDrawMode(void *p, s32 dfe, s32 dtd, s32 tpage, RECT *tw);
 void SetDrawTPage(void *p, s32 dfe, s32 dtd, u16 tpage);
 void SetTile(void *p);
 void SetSprt(SPRT *p);
+u16 GetClut(s32 x, s32 y);
 u16 GetTPage(s32 tp, s32 abr, s32 x, s32 y);
 
 #endif /* LIBGPU_H */

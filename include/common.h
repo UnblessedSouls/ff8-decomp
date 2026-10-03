@@ -9,7 +9,7 @@ typedef unsigned short u16;
 typedef short s16;
 typedef unsigned int u32;
 typedef int s32;
-
+typedef int intrptr_t;
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
@@ -66,32 +66,32 @@ typedef union {
 /*
  * GP stack allocation — allocates `size` bytes from the GP-relative area,
  * returning the current GP in `ptr`. Used for temporary scratchpad structs.
+ * One asm statement: when `ptr` lives on the stack, its store lands after
+ * both instructions (text/drawDialogText).
  */
 #define GP_ALLOC(ptr, size) \
-    asm volatile("addu %0, $gp, $zero" : "=r"(ptr)); \
-    asm volatile("addi $gp, $gp, %0" : : "i"(size))
+    asm volatile("addu %0, $gp, $zero\n\taddi $gp, $gp, %1" : "=r"(ptr) : "i"(size))
 
 /* Free `size` bytes from the GP stack (reverses GP_ALLOC). */
 #define GP_FREE(size) \
     asm volatile("addi $gp, $gp, -%0" : : "i"(size))
 
-/*
- * Combined GP save+set scratchpad macro — saves $gp to `saved`, then points
- * $gp at the scratchpad (0x1F800300). The compiler materializes the address.
- */
-#define GP_SAVE_SCRATCH(saved) \
+/* Combined GP save+set macro — saves $gp to `saved`, then points $gp at `addr`. */
+#define GP_SAVE_SET(saved, addr) \
     asm volatile("addu %0, $gp, $zero" : "=r"(saved)); \
-    asm volatile("addu $gp, %0, $zero" : : "r"((u8 *)0x1F800300))
+    asm volatile("addu $gp, %0, $zero" : : "r"(addr))
+
+/* GP_SAVE_SET onto the scratchpad (0x1F800300). The compiler materializes the address. */
+#define GP_SAVE_SCRATCH(saved) GP_SAVE_SET(saved, (u8 *)0x1F800300)
 
 /*
  * Combined GP get return + restore macro — captures $gp (scratchpad pointer)
- * into ret, then restores original $gp from `saved`.
+ * into ret, then restores original $gp from `saved`. Two asm statements: when
+ * `saved` lives on the stack, its reload lands between them (text/drawMessageText).
  */
 #define GP_RESTORE_RET(saved, ret) \
-    asm volatile( \
-        "addu %0, $gp, $zero\n\t" \
-        "addu $gp, %1, $zero" \
-        : "=r"(ret) : "r"(saved))
+    asm volatile("addu %0, $gp, $zero" : "=r"(ret)); \
+    asm volatile("addu $gp, %0, $zero" : : "r"(saved))
 
 /*
  * Hand-tuned addPrim — the 4-instruction sll/lwl/swl/swl sequence that
@@ -107,9 +107,9 @@ typedef union {
  *   swl tmp, 0x2(prim)
  *
  * Only `tmp` varies per site, and it varies in ways no compiler-allocated
- * operand can reproduce (func_80031224 links four prims with ascending
- * $t5,$t6,$t7,$t8 where gcc coalesces any "=&r" temp into one register;
- * $v0 never appears — return-register etiquette; tiny leaves use
+ * operand can reproduce (drawSeedRankNotificationUnderlines links four prims
+ * with ascending $t5,$t6,$t7,$t8 where gcc coalesces any "=&r" temp into one
+ * register; $v0 never appears — return-register etiquette; tiny leaves use
  * callee-saved temps). The original developers hand-picked the temp at
  * each call site, so the macro takes it as an explicit parameter.
  */
@@ -120,11 +120,12 @@ typedef union {
  *
  * This mirrors how the original code demonstrably worked: the temp varies
  * per site in ways no compiler-allocated operand can reproduce (e.g.
- * func_80031224 links four prims with ascending $t5,$t6,$t7,$t8 — gcc
- * coalesces any allocated temp into one register there), $v0 is never
- * used (return-register etiquette), and tiny leaf functions pick
- * callee-saved temps an allocator would not. The devs hand-picked the
- * register at each site; the third argument reconstructs that choice.
+ * drawSeedRankNotificationUnderlines links four prims with ascending
+ * $t5,$t6,$t7,$t8 — gcc coalesces any allocated temp into one register
+ * there), $v0 is never used (return-register etiquette), and tiny leaf
+ * functions pick callee-saved temps an allocator would not. The devs
+ * hand-picked the register at each site; the third argument reconstructs
+ * that choice.
  * See docs/addprim-sites.md for the per-site register map. */
 #define addPrimFast(ot, p, treg) do {                    \
     __asm__ __volatile__(                                \
@@ -172,9 +173,42 @@ typedef union {
  * addOtFast prepends packet p to the chain: stores the current head into p's
  * tag and leaves p's own tag image (p << 8) as the new head; the scratch
  * input's register carries the image (clobbered by the template, in the
- * addPrimFast style). */
-#define getAddrNewFast(ot, dst) { u32 _pad; __asm__ __volatile__("lwl %0, 2(%2)" : "=r"(dst) : "0"(_pad), "r"(ot) : "memory"); }
+ * addPrimFast style).
+ * getAddrNewFast has no "memory" clobber: reorg must be able to see that a
+ * reload of `ot` made before it is still valid after it (text/drawMessageText).
+ * getAddrNewFast writes the result back into its scratch. That is dead code
+ * where the macro runs once, but inside a loop the scratch becomes
+ * loop-carried: text.c's text renderers reload it from its stack slot into
+ * the head register and store it back around the lwl.
+ * addOtTagFast is addOtFast without the final copy: it leaves p's tag image in
+ * the allocated temp `tag` ("+r", so an uninitialised temp is live from
+ * function entry) and the caller moves it into the head itself. */
+#define getAddrNewFast(ot, dst) { u32 _pad; __asm__ __volatile__("lwl %0, 2(%2)" : "=r"(dst) : "0"(_pad), "r"(ot)); _pad = dst; }
 #define addOtFast(p, head) { u32 _tmp; __asm__ __volatile__("sll %1, %2, 8\n\tswl %0, 2(%2)\n\taddu %0, %1, $0" : "+r"(head) : "r"(_tmp), "r"(p) : "memory"); }
+#define addOtTagFast(p, head, tag) __asm__ __volatile__("sll %0, %2, 8\n\tswl %1, 2(%2)" : "+r"(tag) : "r"(head), "r"(p) : "memory")
+
+/** @brief Prepend packet @p p to an OT chain; returns the new chain head. */
+static inline u32 linkPacket(u32 head, void *p) {
+    u32 tag;
+
+    addOtTagFast(p, head, tag);
+    return tag;
+}
+
+/** @brief GP0(E2h) word that turns the texture window off. */
+#define TEXWINDOW_OFF 0xE2000000
+
+/** @brief A sprite that carries its own draw mode and texture window (tag length 7). */
+typedef struct {
+    u32 tag;
+    u32 drawMode; /* GP0(E1h) */
+    u32 texWindow[2]; /* GP0(E2h), then a zero word */
+    u8 r0, g0, b0, code;
+    s16 x0, y0;
+    u8 u0, v0;
+    u16 clut;
+    u16 w, h;
+} ModeSprt;
 
 /* Mark an uninitialised variable as deliberately carrying whatever garbage
  * its register holds. The empty volatile asm is a definition the optimiser
@@ -212,8 +246,6 @@ typedef struct {
 
 extern EncounterParams D_80082C90;
 
-/** @brief Append string @p src onto @p dst (main-binary string concatenation). */
-extern void func_80047C74(u8 *dst, u8 *src);
 
 /** @brief Integer square root of @p a (main-binary helper). */
 

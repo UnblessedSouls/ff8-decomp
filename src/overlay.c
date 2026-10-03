@@ -1,6 +1,8 @@
 #include "common.h"
+#include "psxsdk/libetc.h"
 #include "psxsdk/libgpu.h"
 #include "battle.h"
+#include "ui/seed_rank.h"
 #include "cd.h"
 #include "gamestate.h"
 #include "overlay.h"
@@ -36,9 +38,9 @@ extern OvlCmdEntry g_ovlCmdQueue[];
 extern u32 load_table[];
 extern u32 D_80097420[];
 extern u32 D_80053D08[][2];
-extern u8 D_80053CF0[];
-extern u8 D_80053CF8[];
-extern u8 D_80053D00[];
+extern RECT D_80053CF0;
+extern RECT D_80053CF8;
+extern RECT D_80053D00;
 extern DISPENV D_80085150;
 extern s32 D_8005F138;
 extern void func_80035E8C(void);
@@ -307,10 +309,10 @@ s32 isOverlayQueueEmpty(void) {
 void saveAndClearFramebuffer(s32 a0) {
     DrawSync(0);
     VSync(0);
-    StoreImage(D_80053CF0, (u32 *)0x801BF000);
+    StoreImage(&D_80053CF0, (u32 *)0x801BF000);
     DrawSync(0);
     VSync(0);
-    ClearImage(D_80053CF0, 0, 0, 0);
+    ClearImage(&D_80053CF0, 0, 0, 0);
     DrawSync(0);
     VSync(0);
     if (a0 < 0) {
@@ -326,16 +328,23 @@ void saveAndClearFramebuffer(s32 a0) {
 }
 
 
-extern s32 func_800432D8(void);
-
+/**
+ * @brief Clear the display, reload the image at 0x801BF000 and, if requested, reset the display environment.
+ *
+ * A negative @p a0 also copies the 128x224 block at x 384 to x 768. When
+ * D_8008520C is set, D_80085150 becomes a 320x224 display environment, moved
+ * down 24 lines in PAL, and D_8005F138 points at it.
+ *
+ * @param a0 Negative to copy the block.
+ */
 void func_8003631C(s32 a0) {
     RECT rect;
 
-    ClearImage(D_80053CF8, 0, 0, 0);
-    ClearImage(D_80053D00, 0, 0, 0);
+    ClearImage(&D_80053CF8, 0, 0, 0);
+    ClearImage(&D_80053D00, 0, 0, 0);
     DrawSync(0);
     VSync(0);
-    LoadImage((RECT *)D_80053CF0, (u32 *)0x801BF000);
+    LoadImage(&D_80053CF0, (u32 *)0x801BF000);
     DrawSync(0);
     VSync(0);
 
@@ -352,7 +361,7 @@ void func_8003631C(s32 a0) {
 
     if (D_8008520C != 0) {
         SetDefDispEnv(&D_80085150, 0, 0, 0x140, 0xE0);
-        if (func_800432D8() == 1) {
+        if (GetVideoMode() == MODE_PAL) {
             D_80085150.screen.y += 0x18;
         }
         D_8005F138 = (s32)&D_80085150;
@@ -371,12 +380,12 @@ extern void func_801F04E8(s32 a0, s32 a1, s32 a2, s32 a3);
 /**
  * @brief Run a battle/menu transition: snapshot state, swap overlays, restore.
  *
- * Saves the live values of @c g_battleAnims fields 0x250, 0x252, 0x703, 0x9B0,
- * 0x9C0 and the SFX-channel-0 volume / entity type, then zeroes those fields
+ * Saves dialog 0's text position, brightness and entity type, the countdown's
+ * visibility and both gauges' flags, then zeroes the position, visibility, flags
  * and a small block of static state (D_80085210, D_8008520A, D_8008520C, the
- * @c D_8008513C render-flag bitmask). After running @c initBattleTransition
- * and forcing SFX channel 0 into a known idle configuration (type 6, volume
- * 0x1000, pitch 0, field2F 0x56), the function blanks the display, drains the
+ * @c D_8008513C render-flag bitmask). After running @c resetSeedRankNotification
+ * and forcing dialog 0 into a known idle configuration (type 6, brightness
+ * 0x1000, text speed 0, corner icon 0x56), the function blanks the display, drains the
  * CD pipeline, snapshots the framebuffer to @p arg0, brings in the two
  * fixed-address overlays at 0x801CD000 / 0x801D5000, and jumps into the
  * post-transition entry point at @c func_801F04E8 with the low 31 bits of
@@ -396,37 +405,37 @@ extern void func_801F04E8(s32 a0, s32 a1, s32 a2, s32 a3);
 s32 func_8003646C(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     u16 saved250;
     u8 saved252;
-    u8 saved703;
-    u8 saved9B0;
-    u8 saved9C0;
-    s32 savedVolume;
+    u8 savedCountdownVisible;
+    u8 savedGauge0Flags;
+    u8 savedGauge1Flags;
+    s32 savedBrightness;
     s32 savedEntityType;
 
     setMcBusy();
 
-    saved250 = g_battleAnims.field250;
+    saved250 = g_engine.dialogs.entries[0].textX;
     D_80085210 = arg0;
-    saved252 = g_battleAnims.field252;
+    saved252 = g_engine.dialogs.entries[0].textY;
     D_8008520A = 0;
-    saved703 = g_battleAnims.field703;
-    saved9B0 = g_battleAnims.field9B0;
-    saved9C0 = g_battleAnims.field9C0;
+    savedCountdownVisible = g_engine.countdown.visible;
+    savedGauge0Flags = g_engine.gauges[0].flags;
+    savedGauge1Flags = g_engine.gauges[1].flags;
 
-    g_battleAnims.field252 = 0;
-    D_8008520C = (g_battleAnims.field250 = 0);
-    g_battleAnims.field703 = 0;
-    g_battleAnims.field9B0 = 0;
-    g_battleAnims.field9C0 = 0;
-    D_8008520B = saved703;
+    g_engine.dialogs.entries[0].textY = 0;
+    D_8008520C = (g_engine.dialogs.entries[0].textX = 0);
+    g_engine.countdown.visible = 0;
+    g_engine.gauges[0].flags = 0;
+    g_engine.gauges[1].flags = 0;
+    D_8008520B = savedCountdownVisible;
 
-    initBattleTransition();
+    resetSeedRankNotification();
 
-    savedVolume = g_battleAnims.field23A;
-    savedEntityType = readSfxEntityType(0);
-    setSfxEntityType(0, 6);
-    setSfxEntryVolume(0, 0x1000);
-    setSfxPitch(0, 0);
-    setSfxField2F(0, 0x56);
+    savedBrightness = g_engine.dialogs.entries[0].brightness;
+    savedEntityType = readDialogEntityType(0);
+    setDialogEntityType(0, 6);
+    setDialogBrightness(0, 0x1000);
+    setDialogTextSpeed(0, 0);
+    setDialogCornerIcon(0, 0x56);
     D_8008513C = 0;
     setRenderFlag(0);
     DrawSync(0);
@@ -441,7 +450,7 @@ s32 func_8003646C(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     saveAndClearFramebuffer(arg0);
     loadOverlayWithTimCallback(9, 0x801CD000);
     loadOverlayWithTimCallback(0xA, 0x801D5000);
-    activateBattleAnim(0);
+    requestPadSetup(0);
     func_801F04E8(arg0 & 0x7FFFFFFF, arg1, arg2, arg3);
 
     while (pollCdReadStatus() != 0) {
@@ -453,14 +462,14 @@ s32 func_8003646C(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     DrawSync(0);
     VSync(0);
 
-    g_battleAnims.field9B0 = saved9B0;
-    g_battleAnims.field9C0 = saved9C0;
-    g_battleAnims.field703 = D_8008520B;
-    setSfxEntryVolume(0, savedVolume);
-    setSfxField2F(0, 0);
-    setSfxEntityType(0, savedEntityType);
-    g_battleAnims.field250 = saved250;
-    g_battleAnims.field252 = saved252;
+    g_engine.gauges[0].flags = savedGauge0Flags;
+    g_engine.gauges[1].flags = savedGauge1Flags;
+    g_engine.countdown.visible = D_8008520B;
+    setDialogBrightness(0, savedBrightness);
+    setDialogCornerIcon(0, 0);
+    setDialogEntityType(0, savedEntityType);
+    g_engine.dialogs.entries[0].textX = saved250;
+    g_engine.dialogs.entries[0].textY = saved252;
     return D_8008513C;
 }
 
