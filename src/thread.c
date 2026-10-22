@@ -7,6 +7,7 @@
 #include "battle.h"
 #include "thread.h"
 
+static s32 func_80027038(EngineState *a0, PadPort *port, u16 a2, u16 a3, s32 a4);
 static void stepPadPort(s32 a0, PadPort *port, s32 a2);
 static void stepPadPorts(s32 a0);
 static u16 getPadReadReleased(s32 idx, s32 offset);
@@ -103,7 +104,38 @@ void switchThread(s32 a0) {
 }
 
 
-INCLUDE_ASM("asm/nonmatchings/thread", func_80027038);
+static s32 func_80027038(EngineState *a0, PadPort *port, u16 a2, u16 a3, s32 a4) {
+    s32 counter;
+    s32 interval;
+    u16 restartDelay;
+    u16 repeatInterval;
+    u16 mask;
+
+    restartDelay = a0->repeatDelays.hword;
+    mask = port->unk10[a4];
+    counter = port->field0C[a4];
+
+    interval = restartDelay >> 8;
+    restartDelay &= 0xFF;
+    repeatInterval = interval;
+    a3 &= mask;
+    a2 &= mask;
+    if (a3 & a2) {
+        if (a3 != a2) {
+            counter = restartDelay;
+        }
+        counter--;
+        if (counter < 0) {
+            counter = repeatInterval;
+        } else {
+            a3 = 0;
+        }
+    } else {
+        counter = restartDelay;
+    }
+    port->field0C[a4] = counter;
+    return a3;
+}
 
 
 INCLUDE_ASM("asm/nonmatchings/thread", func_800270B0);
