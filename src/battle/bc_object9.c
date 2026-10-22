@@ -1118,7 +1118,7 @@ s32 func_800B228C(void) {
 
     idx = 0;
     for (i = 0; i < 8; i++) {
-        if ((g_gameState.chars[i].exists & 1) && !(g_gameState.chars[i].statusFlags & 1) && (func_800B21EC(i) != 0)) {
+        if ((g_gameState.chars[i].exists & 1) && !(g_gameState.chars[i].statusFlags & STATUS_KO) && (func_800B21EC(i) != 0)) {
             sp10[idx++] = i;
         }
     }
