@@ -214,7 +214,7 @@ void func_800A9F98(void);
 
 void func_800A9FDC(void);
 
-u16 func_800AA034(s32, s32, s32, s32);
+u16 func_800AA034(s32, s32, s32, s32, s32);
 
 s32 func_800AA368(s32);
 
