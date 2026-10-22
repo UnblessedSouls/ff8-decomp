@@ -233,10 +233,10 @@ void func_800983B8(void) {
         port->field0B = 0;
         port->fieldC3 = 0x31;
         setAnimGlobalCoords(i, 0, 0);
-        port->field0C = 0;
-        port->field0D = 0;
-        port->field0E = 0;
-        port->field0F = 0;
+        port->field0C[0] = 0;
+        port->field0C[1] = 0;
+        port->field0C[2] = 0;
+        port->field0C[3] = 0;
         port->linkedIdx = i++;
         port++;
     } while (i < 2);

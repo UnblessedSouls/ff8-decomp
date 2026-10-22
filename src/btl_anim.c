@@ -217,10 +217,10 @@ static void resetPadInput(s32 idx, s32 buttons) {
     port = &g_engine.ports[g_engine.ports[idx].linkedIdx];
     port->frameCounter = 0;
     port->field0A = 0;
-    port->field0C = g_engine.repeatDelays.b.lo;
-    port->field0D = g_engine.repeatDelays.b.lo;
-    port->field0E = g_engine.repeatDelays.b.lo;
-    port->field0F = g_engine.repeatDelays.b.lo;
+    port->field0C[0] = g_engine.repeatDelays.b.lo;
+    port->field0C[1] = g_engine.repeatDelays.b.lo;
+    port->field0C[2] = g_engine.repeatDelays.b.lo;
+    port->field0C[3] = g_engine.repeatDelays.b.lo;
 
     fid = buttons;
     for (i = 0; 8 > i; i++) {
@@ -246,18 +246,18 @@ static void resetPadInput(s32 idx, s32 buttons) {
 /**
  * @brief Reset a pad port's auto-repeat countdowns and reads.
  *
- * Sets field0C-0F, the per-channel pad auto-repeat countdowns (func_80027038
- * ticks them), to the restart delay g_engine.repeatDelays.b.lo, then
+ * Sets the four field0C entries, the per-channel pad auto-repeat countdowns, to the
+ * restart delay g_engine.repeatDelays.b.lo, then
  * calls resetPadInput to clear its reads.
  *
  * @param idx Port index (0 or 1).
  */
 void initPadInput(s32 idx) {
     PadPort *port = &g_engine.ports[idx];
-    port->field0C = g_engine.repeatDelays.b.lo;
-    port->field0D = g_engine.repeatDelays.b.lo;
-    port->field0E = g_engine.repeatDelays.b.lo;
-    port->field0F = g_engine.repeatDelays.b.lo;
+    port->field0C[0] = g_engine.repeatDelays.b.lo;
+    port->field0C[1] = g_engine.repeatDelays.b.lo;
+    port->field0C[2] = g_engine.repeatDelays.b.lo;
+    port->field0C[3] = g_engine.repeatDelays.b.lo;
     resetPadInput(idx, 0);
 }
 

@@ -37,10 +37,7 @@ typedef struct {
     u8 field09; /**< Shift amount applied to motor[1] in stepPadPort. */
     u8 field0A;
     u8 field0B;
-    u8 field0C;
-    u8 field0D;
-    u8 field0E;
-    u8 field0F;
+    s8 field0C[4];
     u16 unk10[4]; /**< Pad-button mask of each of the four auto-repeat channels. */
     u8 frameCounter;
     s8 field19;   /**< Read back as a signed byte in stepPadPort. */
