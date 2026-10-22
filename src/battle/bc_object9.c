@@ -67,15 +67,16 @@ u8 func_800B0414(u32 arg0, u8* arg1) {
     return 1;
 }
 
+/* this function is triggered by doing Draw -> Stock */
 u8* func_800B04A0(u32 arg0, u8* arg1) {
     s32 i;
-    u8 sp10[8];
+    u8 buffer[8];
     u8* str;
 
     str = arg1;
-    for (i = 5 - func_800B0414(arg0, sp10); i < 5; i++) {
-        if (sp10[i] != 10) { // if its A, skips
-            *str++ = func_800B00E8(sp10[i]);
+    for (i = 5 - func_800B0414(arg0, buffer); i < 5; i++) {
+        if (buffer[i] != 10) {
+            *str++ = func_800B00E8(buffer[i]);
         } 
     }
     
@@ -1180,14 +1181,14 @@ s32 func_800B2224(u8* arg0, s32 size) {
 }
 
 s32 func_800B228C(void) {
-    u8 sp10[8];
+    u8 buffer[8];
     s32 size;
     s32 i;
 
     size = 0;
     for (i = 0; i < 8; i++) {
         if ((g_gameState.chars[i].exists & 1) && !(g_gameState.chars[i].statusFlags & STATUS_KO) && (func_800B21EC(i) != 0)) {
-            sp10[size++] = i;
+            buffer[size++] = i;
         }
     }
         
@@ -1195,7 +1196,7 @@ s32 func_800B228C(void) {
         return 255;
     }
 
-    return func_800B2224(&sp10, size);
+    return func_800B2224(&buffer, size);
 }
 
 /**
