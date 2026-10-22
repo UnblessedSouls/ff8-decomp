@@ -19,6 +19,7 @@
 #include "psxsdk/libgpu.h"
 #include "psxsdk/libetc.h"
 #include "main.h"
+#include "ui/window.h"
 
 /* Main-executable symbols without an owner header yet. */
 extern u8 D_80056290[];
@@ -143,7 +144,128 @@ void func_801EF934(s32 a0, s32 a1, s32 *a2) {
 
 INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801EF9AC);
 
-INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801EFBB4);
+/**
+ * @brief Renders the rows of a menu list within a window frame.
+ *
+ * Delegates row rendering to the callback provided as a parameter, invoking
+ * it for each row of the list.
+ *
+ * When a page transition is in progress, renders the horizontal slide
+ * animation between the previous and next pages in response to left or right
+ * directional input.
+ *
+ * Called continuously while a menu displaying a paged list is active, as part
+ * of the menu rendering loop.
+ *
+ * @param ot Ordering table used to sort GPU primitives for rendering.
+ * @param _prim Pointer to the next available GPU primitive.
+ * @param _drawRowCallback Callback function used to render each row of the list.
+ * @return Pointer to the next available GPU primitive after rendering.
+ */
+void *func_801EFBB4(void *ot, void *_prim, MenuRowCallback _drawRowCallback) {
+    void *prim = _prim;
+    MenuRowCallback drawRowCallback = _drawRowCallback;
+    s32 iconType;
+    s32 remainingWidth;
+    s32 transitionWidth;
+    s32 transitionProgress;
+    s32 xMin;
+    s32 xMax;
+    s32 i;
+    MenuDisplayConfig *cfg;
+
+    cfg = &g_menuDisplayCfg;
+    cfg->x2 = cfg->x;
+    cfg->y2 = cfg->y;
+    cfg->w2 = cfg->w;
+    cfg->h2 = cfg->h;
+    transitionWidth = 0;
+    remainingWidth = 0;
+    transitionProgress = cfg->scrollOffset;
+
+    iconType = cfg->iconType;
+    if (iconType != 0) {
+        prim = drawIcon(ot, prim, iconType, cfg->x, cfg->y, g_menuTint[MENU_TINT_NORMAL]);
+    }
+
+    prim = func_801EF8D8(ot, prim);
+
+    if (transitionProgress != 0) {
+        s32 easedProgress = D_801FA3C8[abs(transitionProgress) / 64];
+
+        if (transitionProgress < 0) {
+            transitionProgress = -easedProgress;
+            transitionWidth = (cfg->w * transitionProgress) / 4096;
+            xMax = cfg->x + abs(transitionWidth);
+            xMin = cfg->x + cfg->w - abs(transitionWidth);
+        } else {
+            transitionProgress = easedProgress;
+            transitionWidth = (cfg->w * transitionProgress) / 4096;
+            xMax = cfg->x + transitionWidth;
+            xMin = cfg->x;
+        }
+
+        func_801F0FD0(xMin - 12, xMax);
+
+        if (drawRowCallback != NULL) {
+            for (i = 0; i < cfg->columnCount; i++) {
+                prim = drawRowCallback(ot, prim, cfg->pageEnd, i, 0);
+            }
+        }
+
+        if (transitionProgress < 0) {
+            remainingWidth = abs(transitionWidth);
+
+            cfg->w2 = remainingWidth;
+            remainingWidth = cfg->w - remainingWidth;
+            cfg->x2 = cfg->x + remainingWidth;
+
+            prim = func_801EF800(ot, prim, &cfg->x2);
+
+            if (remainingWidth >= 9) {
+                cfg->w2 = 8;
+                cfg->x2 = cfg->x + remainingWidth - 8;
+                prim = func_8002B3A0(ot, prim, &cfg->x2, g_menuTint[MENU_TINT_NORMAL], WINDOW_FRAME_RIGHT);
+            }
+
+            cfg->x2 = cfg->x + 8;
+            cfg->w2 = remainingWidth - 8;
+        } else {
+            cfg->x2 = cfg->x;
+            remainingWidth = cfg->w - transitionWidth;
+            cfg->w2 = transitionWidth;
+            
+            prim = func_801EF800(ot, prim, &cfg->x2);
+
+            if (remainingWidth >= 9) {
+                cfg->w2 = 8;
+                cfg->x2 = cfg->x + transitionWidth;
+                prim = func_8002B3A0(ot, prim, &cfg->x2, g_menuTint[MENU_TINT_NORMAL], WINDOW_FRAME_LEFT);
+            }
+
+            cfg->x2 = cfg->x + transitionWidth;
+            cfg->w2 = cfg->w - transitionWidth - 8;
+        }
+    }
+
+    if (cfg->w2 > 0) {
+        if (drawRowCallback != NULL) {
+            func_801F0FD0(cfg->x2 - 12, cfg->x2 + cfg->w2);
+            for (i = 0; i < cfg->columnCount; i++) {
+                prim = drawRowCallback(ot, prim, cfg->pageStart, i, transitionWidth);
+            }
+        }
+        if (remainingWidth != 0) {
+            prim = func_801EF800(ot, prim, &cfg->x2);
+        }
+    }
+
+    cfg->iconType = 0;
+    prim = func_801EF9AC(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    cfg->iconType = iconType;
+    func_801F0FD0(0, 0);
+    return prim;
+}
 
 /**
  * @brief Build the 65-entry falloff table in D_801FA3C8.

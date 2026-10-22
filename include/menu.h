@@ -247,7 +247,7 @@ typedef struct {
 
 /* menumain-owned shared symbols (canonical signatures from menumain.c). */
 s32 func_801F6AFC(s32);
-s32 func_801EFBB4(s32, s32, MenuRowCallback);
+void *func_801EFBB4(void *, void *, MenuRowCallback);
 u32 func_801F0FEC(s32, s32, s32, s32, u8 *, s32);
 s32 func_801F3FB4(s32);
 s32 func_801F5104(s32);
