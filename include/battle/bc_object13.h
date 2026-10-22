@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+void func_800C42DC(void);
 /**
  * @file
  * @brief Battle sound sequences.

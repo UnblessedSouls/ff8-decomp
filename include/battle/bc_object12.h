@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+u8 *func_800C0134(void);
 /**
  * @file
  * @brief Battle animation part lists.

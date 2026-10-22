@@ -4,8 +4,13 @@
 #include "game.h"
 #include "gamestate.h"
 #include "kernel.h"
-#include "battle/bc_object9.h"
 #include "battle/bc_object4.h"
+#include "battle/bc_object9.h"
+#include "battle/bc_object10.h"
+#include "battle/bc_object12.h"
+#include "battle/bc_object13.h"
+#include "battle/bc_object14.h"
+#include "battle/bc_object15.h"
 
 extern u8 D_800EE490[];
 
@@ -1196,7 +1201,7 @@ s32 func_800B228C(void) {
         return 255;
     }
 
-    return func_800B2224(&buffer, size);
+    return func_800B2224(buffer, size);
 }
 
 /**

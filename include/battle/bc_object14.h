@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+void func_800C65A8(void);
+
 /**
  * @file
  * @brief Battle sound-effect callbacks.
