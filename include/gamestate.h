@@ -438,7 +438,7 @@ extern void func_80036D44(s32 mask);
 extern void setPartyLeader(s32 charId);
 
 /** @brief Bitmask of characters currently available to the party. */
-extern s32 func_80036EC0(void);
+extern u32 func_80036EC0(void);
 
 extern void func_800370AC(s32 arg0);
 extern u8 *getChocoboWorldPtr(void);

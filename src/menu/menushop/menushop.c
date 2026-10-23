@@ -1885,7 +1885,7 @@ s32 func_801E7F4C(s32 characterId, u32 gil) {
  */
 s32 func_801E8058(u32 gil) {
     WeaponEntry *weapons;
-    s32 availableChars;
+    u32 availableChars;
     s32 charBit;
     s32 ret;
     s32 i;
@@ -1895,7 +1895,7 @@ s32 func_801E8058(u32 gil) {
     }
 
     weapons = g_kernel.weapons;
-    availableChars = func_80036EC0() & 0x3F;
+    availableChars = func_80036EC0() % 64;
     ret = 0;
 
     for (i = 0; i < WEAPON_INFO_COUNT; i++) {
