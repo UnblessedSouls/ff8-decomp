@@ -1540,20 +1540,20 @@ s32 func_801F5150(s32 a0, s32 a1, s32 a2) {
  */
 void func_801F5190(s32 charId) {
     MenuCharData *data;
-    BattleCharState *btlChars;
+    BattleCharData *btlChars;
     s32 statusFlags;
     s32 i;
 
     data = &D_801FABC8[charId];
-    btlChars = &g_battleChars;
+    btlChars = &g_battleChars.chars[0];
     setPartyLeader(charId);
-    data->currentLevel = btlChars->chars[0].currentLevel;
-    data->currentHp = btlChars->chars[0].currentHp;
-    data->maxHp = btlChars->chars[0].maxHp;
-    data->currentExp = btlChars->chars[0].currentExp;
-    data->expToNextLevel = btlChars->chars[0].expToNextLevel;
+    data->currentLevel = btlChars->currentLevel;
+    data->currentHp = btlChars->currentHp;
+    data->maxHp = btlChars->maxHp;
+    data->currentExp = btlChars->currentExp;
+    data->expToNextLevel = btlChars->expToNextLevel;
     data->hpRatio = (data->currentHp * 48) / data->maxHp;
-    data->mag = btlChars->chars[0].stats[BATTLE_STAT_MAG];
+    data->mag = btlChars->stats[BATTLE_STAT_MAG];
     data->statusFlags = func_801F21D0(charId);
     statusFlags = func_801F5150(data->currentHp, data->maxHp, data->statusFlags);
     data->statusFlags = statusFlags;
@@ -1561,7 +1561,7 @@ void func_801F5190(s32 charId) {
     data->charId = charId;
 
     for (i = 0; i < 4; i++) {
-        data->commandIds[i] = btlChars->chars[0].abilityCommands[i].commandId;
+        data->commandIds[i] = btlChars->abilityCommands[i].commandId;
     }
 
     for (i = 0; i < 4; i++) {
