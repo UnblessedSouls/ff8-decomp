@@ -178,6 +178,28 @@ typedef struct {
     u8 param2;  /**< 0x3: type-dependent (status mask, stat mask, compatibility amount, magazine end page). */
 } MItemEntry; /* 0x4 = 4 bytes */
 
+/** @brief Menu ability entry. */
+typedef struct {
+    u8 id; /**< 0x0: Ability ID. */
+    u8 category; /**< 0x1: Ability category. */
+} MenuAbilityEntry; /* 0x2 bytes */
+
+/** @brief Character data used for display in the menu. */
+typedef struct {
+    u32 currentExp; /**< 0x0: Current experience. */
+    s32 expToNextLevel; /**< 0x4: Remaining experience to next level. */
+    s16 currentHp; /**< 0x8: Current HP. */
+    s16 maxHp; /**< 0xA: Max HP. */
+    u8 currentLevel; /**< 0xC: Current level. */
+    s8 hpRatio; /**< 0xD: Current HP as a fraction of max HP. */
+    u16 statusFlags; /**< 0xE: Status flags. */
+    u8 charId; /**< 0x10: Character ID. */
+    u8 mag; /**< 0x11: Bonus MAG stat. */
+    u8 commandIds[4]; /**< 0x12: Command IDs. */
+    MenuAbilityEntry abilities[4]; /**< 0x16: Abilities. */
+    u8 pad1E[0x2];
+} MenuCharData; /* 0x20 bytes */
+
 extern MItemEntry D_801F889C[];
 extern u8  D_801F8BB8[];
 extern u8  D_801FA278;
@@ -215,7 +237,7 @@ extern u8  D_801FAB7B;
 extern u8  D_801FAB7C;
 extern u8  D_801FAB88[];
 extern u8  D_801FABC4[4];
-extern u8  D_801FABC8[];
+extern MenuCharData D_801FABC8[];
 extern u16 D_801FACE2;
 extern u16 D_801FACE4;
 extern s32 D_801FACE8;

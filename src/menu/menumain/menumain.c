@@ -1531,7 +1531,50 @@ s32 func_801F5150(s32 a0, s32 a1, s32 a2) {
     return a2;
 }
 
-INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801F5190);
+/**
+ * @brief Updates a character's data for display in the main menu.
+ *
+ * Called for each of the eight characters when the main menu is displayed.
+ *
+ * @param charId Character ID.
+ */
+void func_801F5190(s32 charId) {
+    MenuCharData *data;
+    BattleCharData *btlChars;
+    s32 statusFlags;
+    s32 i;
+
+    data = &D_801FABC8[charId];
+    btlChars = &g_battleChars.chars[0];
+    setPartyLeader(charId);
+    data->currentLevel = btlChars->currentLevel;
+    data->currentHp = btlChars->currentHp;
+    data->maxHp = btlChars->maxHp;
+    data->currentExp = btlChars->currentExp;
+    data->expToNextLevel = btlChars->expToNextLevel;
+    data->hpRatio = (data->currentHp * 48) / data->maxHp;
+    data->mag = btlChars->stats[BATTLE_STAT_MAG];
+    data->statusFlags = func_801F21D0(charId);
+    statusFlags = func_801F5150(data->currentHp, data->maxHp, data->statusFlags);
+    data->statusFlags = statusFlags;
+    g_gameState.chars[charId].statusFlags = statusFlags;
+    data->charId = charId;
+
+    for (i = 0; i < 4; i++) {
+        data->commandIds[i] = btlChars->abilityCommands[i].commandId;
+    }
+
+    for (i = 0; i < 4; i++) {
+        s32 abilityId;
+        s32 abilityCategory;
+
+        abilityId = g_gameState.chars[charId].abilities[i];
+        data->abilities[i].id = abilityId;
+
+        abilityCategory = getAbilityCategory(abilityId) + 216;
+        data->abilities[i].category = abilityCategory;
+    }
+}
 
 /** @brief Save 3 active party slots to D_801FABC4 and clear originals to 0xFF. */
 void func_801F5300(void) {
