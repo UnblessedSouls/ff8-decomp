@@ -188,7 +188,7 @@ static void func_801E81A4(JunkShopMenuState *s) {
                 s32 equippedWeaponId;
                 equippedWeaponId = s->equippedWeapons[s->selCharacterIndex];
                 
-                if ((selectedWeaponId & 0x3F) == equippedWeaponId) {
+                if ((selectedWeaponId % 64) == equippedWeaponId) {
                     u8 *msg;
                     sendSpuCommand(5);
                     msg = func_801F6AA4(STRING_JUNK_SHOP_YOU_HAVE_IT_ALREADY);
@@ -205,7 +205,7 @@ static void func_801E81A4(JunkShopMenuState *s) {
             } else {
                 u8 *msg;
                 sendSpuCommand(5);
-                if (func_801E7E68(selectedWeaponId & 0x3F, s->gil) != 0) {
+                if (func_801E7E68(selectedWeaponId % 64, s->gil) != 0) {
                     msg = func_801F6AA4(STRING_JUNK_SHOP_NOT_ENOUGH_ITEMS);
                 } else {
                     msg = func_801F6AA4(STRING_JUNK_SHOP_NOT_ENOUGH_MONEY);
@@ -246,7 +246,7 @@ static void func_801E81A4(JunkShopMenuState *s) {
         s32 charId;
         s->cursorPosition = 1;
         charId = findNthSetBit(s->availableCharactersMask, s->selCharacterIndex);
-        D_801EB2E4 = D_801EB150[s->selWeaponIndex] & 0x3F;
+        D_801EB2E4 = D_801EB150[s->selWeaponIndex] % 64;
         D_801EB2E8 = charId;
         func_801E7D30(func_801F6AA4(STRING_JUNK_SHOP_REMODEL_WEAPON_TO), D_801EB160);
         func_801F728C(D_801EB160, 75);
@@ -492,7 +492,7 @@ static s32 func_801E8BD8(JunkShopMenuState *s, s32 arg1, s32 arg2, s32 arg3, s32
     s32 y;
     s32 i;
     u8 *weaponIdPtr;
-    s32 weaponId;
+    u32 weaponId;
     s32 mask;
     s32 color;
     s32 price;
@@ -514,9 +514,9 @@ static s32 func_801E8BD8(JunkShopMenuState *s, s32 arg1, s32 arg2, s32 arg3, s32
                 if (weaponId & 0x80) {
                     color = DIALOG_COLOR_WHITE;
                 }
-                arg2 = func_801F0FEC(arg1, arg2, x, y, getWeaponName(weaponId & 0x3F), color);
+                arg2 = func_801F0FEC(arg1, arg2, x, y, getWeaponName(weaponId % 64), color);
                 x = arg3 + 189;
-                price = func_801E7E1C(weaponId & 0x3F) * s->priceMultiplier / 1000;
+                price = func_801E7E1C(weaponId % 64) * s->priceMultiplier / 1000;
                 arg2 = drawNumberMenuTint(arg1, arg2, (y << 0x10) | (x & 0xFFFF), price, color);
                 y += 13;
             }
@@ -567,7 +567,7 @@ static s32 func_801E8D84(JunkShopMenuState *s, s32 a1, s32 a2, s32 a3, s32 a4) {
 
     cfg = &g_menuDisplayCfg;
     weaponRecipe = D_801E9BA0;
-    weaponRecipe += D_801EB150[s->selWeaponIndex] & 0x3F;
+    weaponRecipe += D_801EB150[s->selWeaponIndex] % 64;
     itemsPtr = (u8 *)weaponRecipe->ingredients;
     x = a3 + 12;
     y = a4 + 9;
