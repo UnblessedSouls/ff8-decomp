@@ -1,6 +1,10 @@
 #ifndef BATTLE_BC_OBJECT10_H
 #define BATTLE_BC_OBJECT10_H
 
+func_800B650C();
+func_800BAE6C();
+func_800B7C48();
+u8 *func_800B84C8(void);
 
 /**
 * @file

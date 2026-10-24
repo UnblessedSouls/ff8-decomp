@@ -2377,7 +2377,7 @@ void func_800A9FDC(void) {
     }
 }
 
-u16 func_800AA034(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
+u16 func_800AA034(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 unused) {
     s32 i;
     s32 result;
     s32 var_s0;

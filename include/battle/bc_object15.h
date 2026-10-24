@@ -4,6 +4,8 @@
 #include "common.h"
 #include "psxsdk/libgte.h"
 
+u8 *func_800C749C(void);
+
 /**
  * @file
  * @brief Battle sprite primitives: animated sprite sets drawn from a table.

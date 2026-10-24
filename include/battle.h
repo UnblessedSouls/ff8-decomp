@@ -349,8 +349,8 @@ typedef struct {
     /* 0x12DC */ u8* unk12DC;
     /* 0x12E0 */ s16 unk12E0;                       /**< Low 13 bits of a packed s16 field. */
     /* 0x12E2 */ u16 unk12E2;
-    /* 0x12E4 */ s16 unk12E4;               
-    /* 0x12E5 */ u8 pad12E5[2];                     /**< Misc state. */
+    /* 0x12E4 */ u16 unk12E4;               
+    /* 0x12E6 */ u16 unk12E6;
     /* 0x12E8 */ u8 volatile unk12E8;               /**< Misc state byte. */
     /* 0x12E9 */ u8 volatile unk12E9;               /**< Misc state byte (touched by 12EA-gated path). */
     /* 0x12EA */ u8 volatile unk12EA;               /**< Misc state gate byte. */
@@ -424,8 +424,8 @@ typedef struct {
     /* 0x132E */ u8 unk132E;
     /* 0x132F */ u8 pad132F;
     /* 0x1330 */ u16 unk1330[3];
-    /* 0x1338 */ s32 unk1338[1];
-} BattleSystem; /* 0x133C (real size undefined) */
+    /* 0x1338 */ s32 unk1338[3];
+} BattleSystem; /* 0x1344 (real size undefined) */
 
 /** @brief 5-byte slot in @c BattleAnimTable.animSlots. */
 typedef struct {
