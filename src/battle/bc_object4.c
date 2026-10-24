@@ -1350,7 +1350,7 @@ void func_800A8578(void) {
 }
 
 void func_800A864C(void) {
-    BattleAnimSlot* temp_v0;
+    BattleAnimSlot* animSlot;
     s32 i;
     s32 idx;
 
@@ -1363,9 +1363,9 @@ void func_800A864C(void) {
         idx = g_gameState.mainData.itemSlots[i].id;
         
         if ((idx != 0) && (idx <= 32)) {
-            temp_v0 = &D_800EE9E8.animSlots[g_gameState.mainData.battleOrder[idx-1]];
-            temp_v0->value = g_gameState.mainData.itemSlots[i].count;
-            temp_v0->id = idx;
+            animSlot = &D_800EE9E8.animSlots[g_gameState.mainData.battleOrder[idx-1]];
+            animSlot->value = g_gameState.mainData.itemSlots[i].count;
+            animSlot->id = idx;
         }
     }
     

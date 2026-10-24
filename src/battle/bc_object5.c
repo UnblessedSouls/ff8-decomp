@@ -7,9 +7,9 @@
 u16 func_800AA034(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 unused) {
     s32 i;
     s32 result;
-    s32 var_s0;
+    s32 val;
 
-    var_s0 = 0;
+    val = 0;
     
     switch (arg3) {
         case 200 ... 201:
@@ -17,7 +17,7 @@ u16 func_800AA034(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 unused) {
             break;
         
         case 0:
-            var_s0 = 1;
+            val = 1;
             /* fallthrough */
         case 1  ... 9:
         case 16 ... 42:
@@ -45,7 +45,7 @@ u16 func_800AA034(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 unused) {
         func_800A9938();
     }
     
-    if (var_s0 == 0) {
+    if (val == 0) {
         func_800A9FDC();
     }
         
