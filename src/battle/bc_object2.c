@@ -121,14 +121,9 @@ void func_8009BCE4(void) { // might be related to renzokuken finishing blow
     SubEntry* var_s0;
 
     var_s0 = func_8009BBD0()->subEntries;
-    if (D_800ED148.unk1305 != 0) {
-        i = 0;
-        do {
-            func_800A09D0(var_s0->unk0); 
-            func_800A5210(var_s0->unk0);
-            var_s0++;
-            i++;
-        } while (i < D_800ED148.unk1305);
+    for (i = 0; i < D_800ED148.unk1305; i++, var_s0++) {
+        func_800A09D0(var_s0->unk0); 
+        func_800A5210(var_s0->unk0);
     }
 }
 
