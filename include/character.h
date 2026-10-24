@@ -198,16 +198,16 @@ typedef struct {
  */
 typedef struct {
     /* 0x00 */ u16 currentHp;          /**< Current HP. */
-    /* 0x02 */ u16 maxHpBonus; // accumulated from having HP Bonus equipped
+    /* 0x02 */ u16 maxHpBonus;         /**< Accumulated from having HP Bonus equipped. */
     /* 0x04 */ u32 experience;         /**< Total experience points. */
     /* 0x08 */ u8 characterId;         /**< Character model/type ID. */
     /* 0x09 */ u8 weaponId;            /**< Current weapon ID (see WeaponId). */
-    /* 0x0A */ u8 str;                 /**< Strength (VGR). */
-    /* 0x0B */ u8 vit;                 /**< Vitality (DFS). */
-    /* 0x0C */ u8 mag;                 /**< Magic (MGI). */
-    /* 0x0D */ u8 spr;                 /**< Spirit (PSY). */
-    /* 0x0E */ u8 spd;                 /**< Speed (VTS). */
-    /* 0x0F */ u8 lck;                 /**< Luck (CHC). */
+    /* 0x0A */ u8 strBonus;            /**< Strength bonus (VGR). */
+    /* 0x0B */ u8 vitBonus;            /**< Vitality bonus (DFS). */
+    /* 0x0C */ u8 magBonus;            /**< Magic bonus (MGI). */
+    /* 0x0D */ u8 sprBonus;            /**< Spirit bonus (PSY). */
+    /* 0x0E */ u8 spdBonus;            /**< Speed bonus (VTS). */
+    /* 0x0F */ u8 lckBonus;            /**< Luck bonus (CHC). */
     /* 0x10 */ MagicSlot magic[MAGIC_SLOT_COUNT]; /**< Magic inventory (32 spell slots). */
     /* 0x50 */ u8 commands[3];         /**< Equipped battle commands. */
     /* 0x53 */ u8 padCommand;          /**< Unused command slot (padding). */

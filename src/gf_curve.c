@@ -12,22 +12,22 @@ void func_8002153C(s32 partySlot, s32 stat) {
 
     switch (stat) {
     case 0:
-        cd->str = clampToByte(cd->str + 1);
+        cd->strBonus = clampToByte(cd->strBonus + 1);
         break;
     case 1:
-        cd->vit = clampToByte(cd->vit + 1);
+        cd->vitBonus = clampToByte(cd->vitBonus + 1);
         break;
     case 2:
-        cd->mag = clampToByte(cd->mag + 1);
+        cd->magBonus = clampToByte(cd->magBonus + 1);
         break;
     case 3:
-        cd->spr = clampToByte(cd->spr + 1);
+        cd->sprBonus = clampToByte(cd->sprBonus + 1);
         break;
     case 4:
-        cd->spd = clampToByte(cd->spd + 1);
+        cd->spdBonus = clampToByte(cd->spdBonus + 1);
         break;
     case 5:
-        cd->lck = clampToByte(cd->lck + 1);
+        cd->lckBonus = clampToByte(cd->lckBonus + 1);
         break;
     }
 }
@@ -280,38 +280,38 @@ s32 func_80021C10(s32 level, s32 charIdx, s32 kind) {
     case JUNCTION_STR:
         curve = g_kernel.characters[charId].strCurve;
         magicId = g_gameState.chars[charIdx].junctions[JUNCTION_STR];
-        bonus = g_gameState.chars[charIdx].str;
+        bonus = g_gameState.chars[charIdx].strBonus;
         jValue = g_kernel.magic[magicId].statJunction[JUNCTION_STR];
         weaponStr = g_kernel.weapons[func_80021B58(charIdx)].strBonus;
         break;
     case JUNCTION_VIT:
         curve = g_kernel.characters[charId].vitCurve;
         magicId = g_gameState.chars[charIdx].junctions[JUNCTION_VIT];
-        bonus = g_gameState.chars[charIdx].vit;
+        bonus = g_gameState.chars[charIdx].vitBonus;
         jValue = g_kernel.magic[magicId].statJunction[JUNCTION_VIT];
         break;
     case JUNCTION_MAG:
         curve = g_kernel.characters[charId].magCurve;
         magicId = g_gameState.chars[charIdx].junctions[JUNCTION_MAG];
-        bonus = g_gameState.chars[charIdx].mag;
+        bonus = g_gameState.chars[charIdx].magBonus;
         jValue = g_kernel.magic[magicId].statJunction[JUNCTION_MAG];
         break;
     case JUNCTION_SPR:
         curve = g_kernel.characters[charId].sprCurve;
         magicId = g_gameState.chars[charIdx].junctions[JUNCTION_SPR];
-        bonus = g_gameState.chars[charIdx].spr;
+        bonus = g_gameState.chars[charIdx].sprBonus;
         jValue = g_kernel.magic[magicId].statJunction[JUNCTION_SPR];
         break;
     case JUNCTION_SPD:
         curve = g_kernel.characters[charId].spdCurve;
         magicId = g_gameState.chars[charIdx].junctions[JUNCTION_SPD];
-        bonus = g_gameState.chars[charIdx].spd;
+        bonus = g_gameState.chars[charIdx].spdBonus;
         jValue = g_kernel.magic[magicId].statJunction[JUNCTION_SPD];
         break;
     case JUNCTION_LCK:
         curve = g_kernel.characters[charId].lckCurve;
         magicId = g_gameState.chars[charIdx].junctions[JUNCTION_LCK];
-        bonus = g_gameState.chars[charIdx].lck;
+        bonus = g_gameState.chars[charIdx].lckBonus;
         jValue = g_kernel.magic[magicId].statJunction[JUNCTION_LCK];
         break;
     }
