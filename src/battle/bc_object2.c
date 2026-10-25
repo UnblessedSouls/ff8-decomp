@@ -108,10 +108,9 @@ void func_8009BC28(void) {
     subEntry = func_8009BBD0()->subEntries;
     D_800ED148.entities[subEntry->unk0].unkC9 = count;
     
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < count; i++, subEntry++) {
         func_800A09D0(subEntry->unk0);
         func_800A5210(subEntry->unk0);
-        subEntry++;
     }
 }
 
