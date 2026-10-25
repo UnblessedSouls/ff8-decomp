@@ -45,7 +45,7 @@ static u16 GetNewlyReleasedButtons(s32 idx, s32 offset);
 static inline GamePadInputFrame *GetHistoricalFrame(s32 idx, s32 offset);
 static s32 GetMouseDeltaMovement(s32 idx, s32 axis, s32 frameOffset);
 static s32 GetGamePadType(s32 idx, s32 frameOffset);
-static void resetPadInput(s32 idx, s32 buttons);
+static void ResetInputHistory(s32 idx, u16 buttons);
 static s16 GetMousePosition(s32 idx, s32 axis);
 
 extern u8 g_animInitialized;
@@ -720,44 +720,41 @@ void SetAutoRepeatButtonMask(s32 unused, s32 buttonGroup, s32 mask) {
 
 
 /**
- * @brief Reset the input state of the port linked to port @p idx.
+ * @brief Reset the input state of a gamepad
  *
  * Restarts its read ring and auto-repeat countdowns, and clears all eight reads.
  *
- * @param idx Port index (selects via inputSourceIndex).
- * @param buttons Held buttons to store in each read.
+ * @param idx Gamepad index
+ * @param buttons Held buttons to store in each frame.
  */
-static void resetPadInput(s32 idx, s32 buttons) {
-    GamePadInputFrame *fp;
-    s32 fid;
-    GamePad *port;
+static void ResetInputHistory(s32 idx, u16 buttons) {
+    GamePad *gamePad;
+    GamePadInputFrame *frame;
     s32 i;
 
-    port = &g_engine.gamePads[g_engine.gamePads[idx].inputSourceIndex];
-    port->frameCounter = 0;
-    port->actuatorDataChanged = 0;
-    port->autoRepeatCountdowns[0] = g_engine.repeatDelays.b.lo;
-    port->autoRepeatCountdowns[1] = g_engine.repeatDelays.b.lo;
-    port->autoRepeatCountdowns[2] = g_engine.repeatDelays.b.lo;
-    port->autoRepeatCountdowns[3] = g_engine.repeatDelays.b.lo;
+    gamePad = &g_engine.gamePads[g_engine.gamePads[idx].inputSourceIndex];
+    gamePad->frameCounter = 0;
+    gamePad->actuatorDataChanged = 0;
+    gamePad->autoRepeatCountdowns[0] = g_engine.repeatDelays.b.lo;
+    gamePad->autoRepeatCountdowns[1] = g_engine.repeatDelays.b.lo;
+    gamePad->autoRepeatCountdowns[2] = g_engine.repeatDelays.b.lo;
+    gamePad->autoRepeatCountdowns[3] = g_engine.repeatDelays.b.lo;
 
-    fid = buttons;
-    for (i = 0; 8 > i; i++) {
-        GamePadInputFrame *frame = &port->frames[i];
+    for (i = 0; i < 8; i++) {
+        frame = &gamePad->frames[i];
         frame->inputReadFailed = 0;
         frame->gamePadInputIdentifier = 0;
-        fp = frame;
-        fp->currentlyPressedButtons = fid;
-        fp->analog[0] = 0;
+        frame->currentlyPressedButtons = buttons;
+        frame->analog[0] = 0;
         frame->analog[1] = 0;
         frame->analog[2] = 0;
         frame->analog[3] = 0;
-        fp->autoRepeatedButtons[0] = 0;
+        frame->autoRepeatedButtons[0] = 0;
         frame->autoRepeatedButtons[1] = 0;
         frame->autoRepeatedButtons[2] = 0;
         frame->autoRepeatedButtons[3] = 0;
-        fp->newlyPressedButtons = 0;
-        fp->newlyReleasedButtons = 0;
+        frame->newlyPressedButtons = 0;
+        frame->newlyReleasedButtons = 0;
     }
 }
 
@@ -767,7 +764,7 @@ static void resetPadInput(s32 idx, s32 buttons) {
  *
  * Sets the four field0C entries, the per-channel pad auto-repeat countdowns, to the
  * restart delay g_engine.repeatDelays.b.lo, then
- * calls resetPadInput to clear its reads.
+ * calls ResetInputHistory to clear its reads.
  *
  * @param idx Port index (0 or 1).
  */
@@ -777,7 +774,7 @@ void initPadInput(s32 idx) {
     port->autoRepeatCountdowns[1] = g_engine.repeatDelays.b.lo;
     port->autoRepeatCountdowns[2] = g_engine.repeatDelays.b.lo;
     port->autoRepeatCountdowns[3] = g_engine.repeatDelays.b.lo;
-    resetPadInput(idx, 0);
+    ResetInputHistory(idx, 0);
 }
 
 
@@ -786,7 +783,7 @@ void initAnimStateAndWait(void) {
 
     g_animInitialized = 1;
     for (i = 0; i < 2; i++) {
-        resetPadInput(i, 0);
+        ResetInputHistory(i, 0);
     }
     PadEnableCom(3);
     for (i = 0; i < 24; i++) {
@@ -804,7 +801,7 @@ void resetAnimState(void) {
     g_animInitialized = 0;
     PadEnableCom(0);
     for (i = 0; i < 2; i++) {
-        resetPadInput(i, 0);
+        ResetInputHistory(i, 0);
     }
 }
 
