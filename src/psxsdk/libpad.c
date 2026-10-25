@@ -36,7 +36,7 @@ INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003A700);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003A7C4);
 
-INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003AB64);
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadChkVsync);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003AB84);
 

@@ -1490,7 +1490,7 @@ void shutdownCardSubsystem(void) {
 
 
 void initBattleSubsystems(void) {
-    settlePadPorts();
+    WaitForGamePadDetection();
     func_8003ABA4();
 }
 

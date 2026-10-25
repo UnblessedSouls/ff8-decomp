@@ -585,7 +585,7 @@ void ff8main(void) {
         while (g_fieldEntity.mode != 4);
         sndStopAll();
         setAnimGlobalState(0);
-        settlePadPorts();
+        WaitForGamePadDetection();
         ResetGraph(3);
     }
 

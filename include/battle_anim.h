@@ -46,11 +46,11 @@ typedef struct {
 typedef struct {
     /* 0x000 */ GamePad gamePads[2];
     /* 0x188 */ u8 gamePadReceiveBuf[2][0x24]; // what each pad sent back, stored by libpad every VSync
-    /* 0x1D0 */ s16 globalCoords[2][2];      /**< Per-slot coords [slot][axis]. */
-    /* 0x1D8 */ s16 clipLeft; /**< Clip region left edge. */
-    /* 0x1DA */ s16 clipTop; /**< Clip region top edge. */
-    /* 0x1DC */ s16 clipRight; /**< Clip region right edge. */
-    /* 0x1DE */ s16 clipBottom; /**< Clip region bottom edge. */
+    /* 0x1D0 */ s16 mousePositions[2][2]; /**< Mouse cursor position per gamepad, [gamepad][axis]. */
+    /* 0x1D8 */ s16 mouseBoundsLeft;
+    /* 0x1DA */ s16 mouseBoundsTop;
+    /* 0x1DC */ s16 mouseBoundsRight;
+    /* 0x1DE */ s16 mouseBoundsBottom;
     /* 0x1E0 */ U16Split repeatDelays;       /**< Pad auto-repeat timing (autoRepeatPadChannel): restart delay in @c b.lo, repeat interval in @c b.hi. */
     /* 0x1E2 */ u8 pad1E2; /**< Unknown. */
     /* 0x1E3 */ u8 animFlag; /**< Also addressed directly as @c g_animFlag. */

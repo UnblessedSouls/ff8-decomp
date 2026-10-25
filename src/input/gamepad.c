@@ -60,7 +60,7 @@ static s32 UpdateAutoRepeatForGroup(EngineState *engine, GamePad *gamePad, u16 p
  *
  * @param engine Engine reference.
  * @param gamePad Gamepad to update.
- * @param port PS1 gamepad port number: 0x00 for port 0, 0x10 for port 1. (assuming no multitap)
+ * @param port PS1 gamepad port number (see CONTROLLER_PORT_*)
  */
 static void SetupActuators(EngineState *engine, GamePad *gamePad, s32 port) {
     s32 actuator;
@@ -120,7 +120,7 @@ static void SetupActuators(EngineState *engine, GamePad *gamePad, s32 port) {
  *
  * @param engine Engine reference.
  * @param gamePad Gamepad to update.
- * @param port PS1 gamepad port number: 0x00 for port 0, 0x10 for port 1. (assuming no multitap)
+ * @param port PS1 gamepad port number (See CONTROLLER_PORT_*)
  */
 static void UpdateGamePad(EngineState *engine, GamePad *gamePad, s32 port) {
     s32 state;
@@ -203,64 +203,54 @@ s32 TrySetAnalogMode(s32 port) {
     return ret;
 }
 
-
-/**
- * @brief Make UpdateGamePad rerun a pad port's setup on its next state-6 tick.
- * @param idx Index into g_engine.gamePads.
- */
-void requestPadSetup(s32 idx) {
+void RequestActuatorSetup(s32 idx) {
     GamePad *port = &g_engine.gamePads[idx];
     port->actuatorSetupPending = 1;
     port->actuatorDataChanged = 1;
 }
 
-
-/**
- * @brief Step both pad ports: port 0 as driver port 0x00, port 1 as 0x10.
- * @param engine Engine state holding both gamepads.
- */
 static void UpdateGamePads(EngineState *engine) {
-    UpdateGamePad(engine, &engine->gamePads[0], 0);
-    UpdateGamePad(engine, &engine->gamePads[1], 0x10);
+    UpdateGamePad(engine, &engine->gamePads[0], CONTROLLER_PORT_1);
+    UpdateGamePad(engine, &engine->gamePads[1], CONTROLLER_PORT_2);
 }
 
-
-void settlePadPorts(void) {
-    GamePad *port = &g_engine.gamePads[0];
+void WaitForGamePadDetection(void) {
     EngineState *engine = &g_engine;
-    s32 count;
-    /* Without this barrier the register allocator gives s0 to count
-       instead of port. */
-    REGALLOC_BARRIER(port);
-    count = 0;
-    port->vibrationIntensity[0] = 0;
-    port->vibrationIntensity[1] = 0;
-    for (;;) {
-        while (func_8003AB64() == 0) {}
-        UpdateGamePad(engine, port, 0);
-        if (port->gamePadState == PadStateDiscon || port->gamePadState == PadStateFindCTP1) {
+    GamePad *gamePad;
+    s32 stableReads0;
+    s32 stableReads1;
+
+    gamePad = &engine->gamePads[0];
+    stableReads0 = 0;
+    gamePad->vibrationIntensity[0] = 0;
+    gamePad->vibrationIntensity[1] = 0;
+    while (1) {
+        while (PadChkVsync() == 0) {} // await communication with controller
+        UpdateGamePad(engine, gamePad, CONTROLLER_PORT_1);
+        if (gamePad->gamePadState == PadStateDiscon || gamePad->gamePadState == PadStateFindCTP1) {
             break;
         }
-        if (port->gamePadState == PadStateStable) {
-            count++;
-            if (count >= 2) {
+        if (gamePad->gamePadState == PadStateStable) {
+            stableReads0++;
+            if (stableReads0 >= 2) {
                 break;
             }
         }
     }
-    port = &engine->gamePads[1];
-    count = 0;
-    port->vibrationIntensity[0] = 0;
-    port->vibrationIntensity[1] = 0;
-    for (;;) {
-        while (func_8003AB64() == 0) {}
-        UpdateGamePad(engine, port, 0x10);
-        if (port->gamePadState == PadStateDiscon || port->gamePadState == PadStateFindCTP1) {
+
+    gamePad = &engine->gamePads[1];
+    stableReads1 = 0;
+    gamePad->vibrationIntensity[0] = 0;
+    gamePad->vibrationIntensity[1] = 0;
+    while (1) {
+        while (PadChkVsync() == 0) {} // await communication with controller
+        UpdateGamePad(engine, gamePad, CONTROLLER_PORT_2);
+        if (gamePad->gamePadState == PadStateDiscon || gamePad->gamePadState == PadStateFindCTP1) {
             break;
         }
-        if (port->gamePadState == PadStateStable) {
-            count++;
-            if (count >= 2) {
+        if (gamePad->gamePadState == PadStateStable) {
+            stableReads1++;
+            if (stableReads1 >= 2) {
                 break;
             }
         }
@@ -269,18 +259,18 @@ void settlePadPorts(void) {
 
 
 /**
- * @brief Copy a rectangle's bounds to g_engine clip region.
+ * @brief Set the area the mouse cursor is kept inside.
  *
- * Copies x, y from @p rect to clipLeft/clipTop, and computes
- * x+w-1, y+h-1 for clipRight/clipBottom.
+ * Copies x, y from @p rect to mouseBoundsLeft/mouseBoundsTop, and computes
+ * x+w-1, y+h-1 for mouseBoundsRight/mouseBoundsBottom.
  *
- * @param rect Source clip rectangle.
+ * @param rect The area, in screen pixels.
  */
-void setBattleAnimClipRect(RECT *rect) {
-    g_engine.clipLeft = rect->x;
-    g_engine.clipTop = rect->y;
-    g_engine.clipRight = rect->x + rect->w - 1;
-    g_engine.clipBottom = rect->y + rect->h - 1;
+void SetMouseBounds(RECT *rect) {
+    g_engine.mouseBoundsLeft = rect->x;
+    g_engine.mouseBoundsTop = rect->y;
+    g_engine.mouseBoundsRight = rect->x + rect->w - 1;
+    g_engine.mouseBoundsBottom = rect->y + rect->h - 1;
 }
 
 
@@ -356,13 +346,13 @@ void func_800275D4(void) {
                 if (type == 1) {
                     x = (s8)buf[4];
                     y = (s8)buf[5];
-                    x += engine->globalCoords[i][0];
-                    y += engine->globalCoords[i][1];
-                    x = (x < engine->clipLeft) ? engine->clipLeft : (x > engine->clipRight) ? engine->clipRight : x;
-                    y = (y < engine->clipTop) ? engine->clipTop : (y > engine->clipBottom) ? engine->clipBottom : y;
+                    x += engine->mousePositions[i][0];
+                    y += engine->mousePositions[i][1];
+                    x = (x < engine->mouseBoundsLeft) ? engine->mouseBoundsLeft : (x > engine->mouseBoundsRight) ? engine->mouseBoundsRight : x;
+                    y = (y < engine->mouseBoundsTop) ? engine->mouseBoundsTop : (y > engine->mouseBoundsBottom) ? engine->mouseBoundsBottom : y;
                     held &= PADL1 | PADR1;
-                    engine->globalCoords[i][0] = x;
-                    engine->globalCoords[i][1] = y;
+                    engine->mousePositions[i][0] = x;
+                    engine->mousePositions[i][1] = y;
                 }
             }
             if (engine->pad1E2 == 0) {
@@ -612,12 +602,12 @@ void setPadMotors(s32 idx, s32 motor1, s32 motor0) {
 
 
 /**
- * @brief Get a global coordinate (X or Y) for a battle anim slot.
- * @param idx Entity index (masked to 0 or 1).
+ * @brief Get one axis of a gamepad's mouse cursor position.
+ * @param idx Gamepad index (masked to 0 or 1).
  * @param axis 0 = X, 1 = Y (clamped to [0,1]).
  * @return The coordinate value as s16.
  */
-s16 getAnimGlobalCoord(s32 idx, s32 axis) {
+s16 GetMousePosition(s32 idx, s32 axis) {
     s32 slot = idx & 1;
 
     do { slot++; slot--; } while (0); /* Regalloc: boost slot priority for s-reg order */
@@ -630,20 +620,20 @@ s16 getAnimGlobalCoord(s32 idx, s32 axis) {
     } else {
         idx = 0;
     }
-    return g_engine.globalCoords[slot][idx];
+    return g_engine.mousePositions[slot][idx];
 }
 
 
 /**
- * @brief Set global coordinates (X and Y) for a battle anim slot.
- * @param idx Entity index (masked to 0 or 1).
+ * @brief Set a gamepad's mouse cursor position.
+ * @param idx Gamepad index (masked to 0 or 1).
  * @param x X coordinate.
  * @param y Y coordinate.
  */
-void setAnimGlobalCoords(s32 idx, s16 x, s16 y) {
+void SetMousePosition(s32 idx, s16 x, s16 y) {
     idx &= 1;
-    g_engine.globalCoords[idx][0] = x;
-    g_engine.globalCoords[idx][1] = y;
+    g_engine.mousePositions[idx][0] = x;
+    g_engine.mousePositions[idx][1] = y;
 }
 
 

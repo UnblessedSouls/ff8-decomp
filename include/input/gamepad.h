@@ -2,6 +2,18 @@
 #define INPUT_GAMEPAD_H
 
 #include "common.h"
+#include "psxsdk/libgpu.h"
+
+#define CONTROLLER_PORT_1 0x00
+#define CONTROLLER_PORT_2 0x10
+#define CONTROLLER_PORT_1_MULTITAP_A = 0x00
+#define CONTROLLER_PORT_1_MULTITAP_B = 0x01
+#define CONTROLLER_PORT_1_MULTITAP_C = 0x02
+#define CONTROLLER_PORT_1_MULTITAP_D = 0x03
+#define CONTROLLER_PORT_2_MULTITAP_A = 0x10
+#define CONTROLLER_PORT_2_MULTITAP_B = 0x11
+#define CONTROLLER_PORT_2_MULTITAP_C = 0x12
+#define CONTROLLER_PORT_2_MULTITAP_D = 0x13
 
 typedef struct {
     u8 inputReadFailed;
@@ -44,16 +56,19 @@ typedef enum {
 
 s32 func_80027DB4(s32 pad, s32 axis, s32 c);
 s32 func_80027CF8(s32 a, s32 b, s32 c);
-void settlePadPorts(void);
+void WaitForGamePadDetection(void);
 s32 getPadVibration(s32 idx);
 void setPadDeadZone(s32 a0, s32 a1);
 void setPadAnalogFlag(s32 a0, s32 a1);
-void requestPadSetup(s32 idx);
+void RequestActuatorSetup(s32 idx);
 s32 getAnimGlobalState(void);
 s32 setAnimGlobalState(s32 value);
 void setPadMotors(s32 idx, s32 motor1, s32 motor0);
 void setPadVibration(s32 idx, s32 val);
 void setPadRepeatMask(s32 unused, s32 channel, s32 mask);
 void initCdAnimSubsystem(void);
+void SetMouseBounds(RECT *rect);
+s16 GetMousePosition(s32 idx, s32 axis);
+void SetMousePosition(s32 idx, s16 x, s16 y);
 
 #endif /* INPUT_GAMEPAD_H */

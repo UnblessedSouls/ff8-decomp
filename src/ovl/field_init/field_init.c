@@ -5,6 +5,7 @@
 #include "gf.h"
 #include "field_init.h"
 #include "field_init_font.h"
+#include "input/gamepad.h"
 #include "psxsdk/libapi.h"
 
 /** @brief Kernel event control block entity (stride 0xC0). */
@@ -182,10 +183,10 @@ void func_80098390(void) {
 }
 
 /**
- * @brief Reset g_engine's two entities, the pad auto-repeat delays and the clip rect.
+ * @brief Reset g_engine's two entities, the pad auto-repeat delays and the mouse bounds.
  */
 void func_800983B8(void) {
-    s16 clipRect[4];
+    RECT mouseBounds;
     s32 i;
     GamePad *port;
     s32 j;
@@ -195,11 +196,11 @@ void func_800983B8(void) {
     engine->repeatDelays.b.hi = 5;
     engine->animFlag = 0;
 
-    clipRect[0] = 0;
-    clipRect[1] = 0;
-    clipRect[2] = 320;
-    clipRect[3] = 224;
-    setBattleAnimClipRect(clipRect);
+    mouseBounds.x = 0;
+    mouseBounds.y = 0;
+    mouseBounds.w = 320;
+    mouseBounds.h = 224;
+    SetMouseBounds(&mouseBounds);
 
     port = engine->gamePads;
     i = 0;
@@ -232,7 +233,7 @@ void func_800983B8(void) {
         port->vibrationMask = 0;
         port->actuatorCount = 0;
         port->analogStickConfig = 0x31;
-        setAnimGlobalCoords(i, 0, 0);
+        SetMousePosition(i, 0, 0);
         port->autoRepeatCountdowns[0] = 0;
         port->autoRepeatCountdowns[1] = 0;
         port->autoRepeatCountdowns[2] = 0;

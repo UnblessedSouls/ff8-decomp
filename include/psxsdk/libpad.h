@@ -18,6 +18,7 @@
 #define InfoActSign		5
 
 void PadInitDirect(unsigned char *, unsigned char *);
+int PadChkVsync(void);
 void PadStartCom(void);
 void PadStopCom(void);
 unsigned PadEnableCom(unsigned mode);
@@ -29,7 +30,6 @@ int PadSetActAlign(int, unsigned char *);
 int PadSetMainMode(int socket, int offs, int lock);
 void PadSetAct(int, unsigned char *, int);
 
-s32 func_8003AB64(void);
 void func_8003AB84(void);
 void func_8003ABA4(void);
 

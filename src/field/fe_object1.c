@@ -494,12 +494,12 @@ void func_8009895C(void) {
             }
             D_8005F14A = 0;
             stopVibration(-1);
-            settlePadPorts();
+            WaitForGamePadDetection();
         }
     }
 
     stopVibration(-1);
-    settlePadPorts();
+    WaitForGamePadDetection();
     VSync(0);
 }
 
@@ -644,7 +644,7 @@ void func_80099348(void) {
         g_fieldEntity.unk1A5 = 0;
     }
     frames = 2;
-    requestPadSetup(0);
+    RequestActuatorSetup(0);
     func_8009A920(&D_80085224[g_fieldEntity.entityIndex[0]], D_8008538C);
 
     while (1) {
