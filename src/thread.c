@@ -87,7 +87,7 @@ u32 getStatusRegister(void) { return GetSr(); }
 
 /** @brief Write @p sr to the CPU's status register. */
 void setStatusRegister(u32 sr) {
-    __asm__ volatile("mtc0 %0, $12" : : "r"(sr));
+    MTC0(sr, C0_SR);
 }
 
 
