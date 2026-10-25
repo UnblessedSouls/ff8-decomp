@@ -322,7 +322,7 @@ void updateResults(void) {
     s32 m;
     u16 state;
 
-    func_800275D4();
+    RecordGamePadInput();
     pressed = applyButtonRemapTranslation(getPadReadPressed(0, 0));
     applyButtonRemapTranslation(getPadReadRepeat(0, 0));
     if (ctx->messageProgress != 0) {

@@ -8,6 +8,33 @@
 #include "field_init.h"
 #include "input/gamepad.h"
 
+enum {
+    CONTROLLER_PORT_1 = 0x00,
+    CONTROLLER_PORT_2 = 0x10,
+    CONTROLLER_PORT_1_MULTITAP_A = 0x00,
+    CONTROLLER_PORT_1_MULTITAP_B = 0x01,
+    CONTROLLER_PORT_1_MULTITAP_C = 0x02,
+    CONTROLLER_PORT_1_MULTITAP_D = 0x03,
+    CONTROLLER_PORT_2_MULTITAP_A = 0x10,
+    CONTROLLER_PORT_2_MULTITAP_B = 0x11,
+    CONTROLLER_PORT_2_MULTITAP_C = 0x12,
+    CONTROLLER_PORT_2_MULTITAP_D = 0x13
+};
+
+#define GAMEPAD_TYPE_MOUSE 1
+#define GAMEPAD_TYPE_ANALOG_JOYSTICK 5
+#define GAMEPAD_TYPE_ANALOG_CONTROLLER 7
+
+typedef struct {
+    u8 inputReadFailed;
+    u8 gamePadInputIdentifier;
+    u8 buttons[2];
+    union {
+        u8 analog[4];
+        s8 mouseMovement[2];
+    } data;
+} GamePadReceiveData;
+
 static s32 UpdateAutoRepeatForGroup(EngineState *engine, GamePad *gamePad, u16 previousButtons, u16 currentButtons, s32 buttonGroup);
 static void SetupActuators(EngineState *engine, GamePad *gamePad, s32 port);
 static void UpdateGamePad(EngineState *engine, GamePad *gamePad, s32 port);
@@ -274,97 +301,99 @@ s32 GetActuatorCountForGamePad(s32 idx) {
     return gamePad->actuatorCount;
 }
 
-
-void func_800275D4(void) {
+/**
+ * @brief Updates gamepad states and records their input in the input ring buffer
+ */
+void RecordGamePadInput(void) {
     EngineState *engine = &g_engine;
-    GamePad *port;
-    u8 *buf;
+    GamePad *gamePad;
+    GamePadReceiveData *receiveBuf;
     GamePadInputFrame *frame;
     u32 sr;
     s32 i;
-    s32 linked;
-    s32 fc;
-    u8 type;
-    s32 prev;
-    s32 held;
-    s32 x;
-    s32 y;
-    s32 dx;
-    s32 dy;
+    s32 inputSourceIndex;
+    s32 frameIndex;
+    u8 gamePadType;
+    s32 previousButtons;
+    s32 currentButtons;
+    s32 mouseX;
+    s32 mouseY;
+    s32 stickX;
+    s32 stickY;
 
     UpdateGamePads(engine);
-    port = engine->gamePads;
+    gamePad = engine->gamePads;
     sr = GetSr();
     if (!(sr & SR_IEP)) {
         EnterCriticalSection();
     }
-    for (i = 0; i < 2; i++, port++) {
-        buf = engine->gamePadReceiveBuf[i];
-        linked = i;
-        type = buf[1] >> 4;
-        fc = port->frameCounter;
-        prev = port->frames[fc].currentlyPressedButtons;
-        held = 0;
-        if (port->gamePadState != PadStateDiscon) {
-            if (buf[0] != 0) {
-                held = prev;
+    for (i = 0; i < 2; i++, gamePad++) {
+        receiveBuf = (GamePadReceiveData *)engine->gamePadReceiveBuf[i];
+        inputSourceIndex = i;
+        gamePadType = receiveBuf->gamePadInputIdentifier >> 4;
+        frameIndex = gamePad->frameCounter;
+        previousButtons = gamePad->frames[frameIndex].currentlyPressedButtons;
+        currentButtons = 0;
+        if (gamePad->gamePadState != PadStateDiscon) {
+            if (receiveBuf->inputReadFailed != 0) {
+                currentButtons = previousButtons;
             } else {
-                held = buf[2] << 8;
-                held += buf[3];
-                held ^= 0xFFFF;
-                if ((held & (PADLleft | PADLright)) == (PADLleft | PADLright)) {
-                    held &= ~(PADLleft | PADLright);
+                currentButtons = receiveBuf->buttons[0] << 8;
+                currentButtons += receiveBuf->buttons[1];
+                currentButtons ^= 0xFFFF;
+                if ((currentButtons & (PADLleft | PADLright)) == (PADLleft | PADLright)) {
+                    currentButtons &= ~(PADLleft | PADLright);
                 }
-                if ((held & (PADLup | PADLdown)) == (PADLup | PADLdown)) {
-                    held &= ~(PADLup | PADLdown);
+                if ((currentButtons & (PADLup | PADLdown)) == (PADLup | PADLdown)) {
+                    currentButtons &= ~(PADLup | PADLdown);
                 }
-                if (engine->animFlag != 0 && i == 0 && held == 0) {
-                    if (type == 7 || type == 5) {
-                        frame = (GamePadInputFrame *)buf;
-                        dx = frame->analog[0] - 0x80;
-                        dy = frame->analog[1] - 0x80;
-                        if (dx * dx + dy * dy < 40 * 40) {
-                            dx = frame->analog[2] - 0x80;
-                            dy = frame->analog[3] - 0x80;
-                            if (dx * dx + dy * dy < 40 * 40) {
-                                linked = 1;
+                if (engine->animFlag != 0 && i == 0 && currentButtons == 0) {
+                    if (gamePadType == GAMEPAD_TYPE_ANALOG_CONTROLLER || gamePadType == GAMEPAD_TYPE_ANALOG_JOYSTICK) {
+                        frame = (GamePadInputFrame *)receiveBuf;
+                        stickX = frame->analog[0] - 0x80;
+                        stickY = frame->analog[1] - 0x80;
+                        if (stickX * stickX + stickY * stickY < 40 * 40) {
+                            stickX = frame->analog[2] - 0x80;
+                            stickY = frame->analog[3] - 0x80;
+                            if (stickX * stickX + stickY * stickY < 40 * 40) {
+                                inputSourceIndex = 1;
                             }
                         }
                     } else {
-                        linked = 1;
+                        inputSourceIndex = 1;
                     }
                 }
-                if (type == 1) {
-                    x = (s8)buf[4];
-                    y = (s8)buf[5];
-                    x += engine->mousePositions[i][0];
-                    y += engine->mousePositions[i][1];
-                    x = (x < engine->mouseBoundsLeft) ? engine->mouseBoundsLeft : (x > engine->mouseBoundsRight) ? engine->mouseBoundsRight : x;
-                    y = (y < engine->mouseBoundsTop) ? engine->mouseBoundsTop : (y > engine->mouseBoundsBottom) ? engine->mouseBoundsBottom : y;
-                    held &= PADL1 | PADR1;
-                    engine->mousePositions[i][0] = x;
-                    engine->mousePositions[i][1] = y;
+                if (gamePadType == GAMEPAD_TYPE_MOUSE) {
+                    mouseX = receiveBuf->data.mouseMovement[0];
+                    mouseY = receiveBuf->data.mouseMovement[1];
+                    mouseX += engine->mousePositions[i][0];
+                    mouseY += engine->mousePositions[i][1];
+                    mouseX = (mouseX < engine->mouseBoundsLeft) ? engine->mouseBoundsLeft : (mouseX > engine->mouseBoundsRight) ? engine->mouseBoundsRight : mouseX;
+                    mouseY = (mouseY < engine->mouseBoundsTop) ? engine->mouseBoundsTop : (mouseY > engine->mouseBoundsBottom) ? engine->mouseBoundsBottom : mouseY;
+                    currentButtons &= MOUSEleft | MOUSEright;
+                    engine->mousePositions[i][0] = mouseX;
+                    engine->mousePositions[i][1] = mouseY;
                 }
             }
             if (engine->pad1E2 == 0) {
-                held = 0;
-                prev = 0;
+                currentButtons = 0;
+                previousButtons = 0;
             }
         }
-        fc++;
-        fc &= 7;
-        frame = &port->frames[fc];
-        ((u32 *)frame)[0] = ((u32 *)buf)[0];
-        ((u32 *)frame)[1] = ((u32 *)buf)[1];
-        frame->currentlyPressedButtons = held;
-        frame->newlyPressedButtons = (prev ^ held) & held;
-        frame->newlyReleasedButtons = (prev ^ held) & ~held;
-        frame->autoRepeatedButtons[0] = UpdateAutoRepeatForGroup(engine, port, prev, held, 0);
-        frame->autoRepeatedButtons[1] = UpdateAutoRepeatForGroup(engine, port, prev, held, 1);
-        frame->autoRepeatedButtons[2] = UpdateAutoRepeatForGroup(engine, port, prev, held, 2);
-        frame->autoRepeatedButtons[3] = UpdateAutoRepeatForGroup(engine, port, prev, held, 3);
-        port->frameCounter = fc;
-        port->inputSourceIndex = linked;
+        frameIndex++;
+        frameIndex &= 7;
+        frame = &gamePad->frames[frameIndex];
+        ((u32 *)frame)[0] = ((u32 *)receiveBuf)[0];
+        ((u32 *)frame)[1] = ((u32 *)receiveBuf)[1];
+        frame->currentlyPressedButtons = currentButtons;
+        frame->newlyPressedButtons = (previousButtons ^ currentButtons) & currentButtons;
+        frame->newlyReleasedButtons = (previousButtons ^ currentButtons) & ~currentButtons;
+        frame->autoRepeatedButtons[0] = UpdateAutoRepeatForGroup(engine, gamePad, previousButtons, currentButtons, 0);
+        frame->autoRepeatedButtons[1] = UpdateAutoRepeatForGroup(engine, gamePad, previousButtons, currentButtons, 1);
+        frame->autoRepeatedButtons[2] = UpdateAutoRepeatForGroup(engine, gamePad, previousButtons, currentButtons, 2);
+        frame->autoRepeatedButtons[3] = UpdateAutoRepeatForGroup(engine, gamePad, previousButtons, currentButtons, 3);
+        gamePad->frameCounter = frameIndex;
+        gamePad->inputSourceIndex = inputSourceIndex;
     }
     if (!(sr & SR_IEP)) {
         ExitCriticalSection();
@@ -537,7 +566,7 @@ s32 func_80027DB4(s32 pad, s32 axis, s32 c) {
         }
         axis = CLAMP(axis, 0, 3);
         type = frame->gamePadInputIdentifier >> 4;
-        if (type == 7 || type == 5) {
+        if (type == GAMEPAD_TYPE_ANALOG_CONTROLLER || type == GAMEPAD_TYPE_ANALOG_JOYSTICK) {
             result = frame->analog[axis];
         }
     }
@@ -649,7 +678,7 @@ static s32 getPadReadByte(s32 idx, s32 param, s32 frameOffset) {
 
     if (frame->inputReadFailed == 0) {
         param = CLAMP(param, 0, 3);
-        if ((frame->gamePadInputIdentifier >> 4) == 1) {
+        if ((frame->gamePadInputIdentifier >> 4) == GAMEPAD_TYPE_MOUSE) {
             result = frame->analog[param];
         }
     }

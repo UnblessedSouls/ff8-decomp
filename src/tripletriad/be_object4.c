@@ -720,7 +720,7 @@ void readPads(void)
     s32 held;
     s32 repeat;
 
-    func_800275D4();
+    RecordGamePadInput();
 
     padRaw = applyButtonRemapTranslation(getPadReadButtons(0, 0));
     oldPad = D_801D4B20[0];

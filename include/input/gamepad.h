@@ -4,17 +4,6 @@
 #include "common.h"
 #include "psxsdk/libgpu.h"
 
-#define CONTROLLER_PORT_1 0x00
-#define CONTROLLER_PORT_2 0x10
-#define CONTROLLER_PORT_1_MULTITAP_A = 0x00
-#define CONTROLLER_PORT_1_MULTITAP_B = 0x01
-#define CONTROLLER_PORT_1_MULTITAP_C = 0x02
-#define CONTROLLER_PORT_1_MULTITAP_D = 0x03
-#define CONTROLLER_PORT_2_MULTITAP_A = 0x10
-#define CONTROLLER_PORT_2_MULTITAP_B = 0x11
-#define CONTROLLER_PORT_2_MULTITAP_C = 0x12
-#define CONTROLLER_PORT_2_MULTITAP_D = 0x13
-
 typedef struct {
     u8 inputReadFailed;
     u8 gamePadInputIdentifier; // high nibble is gamepad type, low is number of byte pairs (16 bit) in input
@@ -45,7 +34,7 @@ typedef struct {
 
 #define PAD_PORT_SWAP_ANALOG_STICKS 0x80
 
-void func_800275D4(void);
+void RecordGamePadInput(void);
 
 typedef enum {
     PAD_AXIS_X2 = 0,

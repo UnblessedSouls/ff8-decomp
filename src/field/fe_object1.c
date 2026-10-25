@@ -554,7 +554,7 @@ void func_80099180(void) {
 
     g_fieldEntity.padHeldPrev = g_fieldEntity.padHeld;
     g_fieldEntity.unk154 = g_fieldEntity.unk150;
-    func_800275D4();
+    RecordGamePadInput();
     g_fieldEntity.padHeld = getPadReadButtons(0, 0);
     g_fieldEntity.padPressed = getPadReadPressed(0, 0);
     g_fieldEntity.field_0x160 = getPadReadButtons(1, 0);

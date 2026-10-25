@@ -360,6 +360,7 @@ UpdateGamePads = 0x80027408; // type:func
 WaitForGamePadDetection = 0x80027448; // type:func
 SetMouseBounds = 0x80027558; // type:func
 GetActuatorCountForGamePad = 0x800275A8; // type:func
+RecordGamePadInput = 0x800275D4; // type:func
 getPadReadButtons = 0x8002795C; // type:func
 getPadReadRepeat = 0x800279CC; // type:func
 getPadReadPressed = 0x80027A58; // type:func

@@ -125,7 +125,7 @@ void func_8009818C(void) {
     PutDrawEnv(&g_introDispCtx.draw);
     ClearOTagR(&g_introDispCtx.ot[g_introDispCtx.currBuf], 1);
 
-    func_800275D4();
+    RecordGamePadInput();
     g_introCtrl0 = getPadReadButtons(0, 0);
     g_introCtrl1 = getPadReadButtons(1, 0);
 

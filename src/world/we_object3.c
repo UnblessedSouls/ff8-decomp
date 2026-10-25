@@ -373,7 +373,7 @@ static void func_800A0388(void) {
     s32 idx;
 
     D_800C4D04 = D_800C4D04 == 0;
-    func_800275D4();
+    RecordGamePadInput();
     D_800C9ED0 = getPadReadButtons(0, 0);
     D_800C9ED4 = getPadReadButtons(1, 0);
     D_800D2278[D_800C4D04] = applyButtonRemapTranslation(D_800C9ED0) | (D_800C9ED4 << 16);
