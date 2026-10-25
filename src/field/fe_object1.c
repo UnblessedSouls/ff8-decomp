@@ -10,7 +10,7 @@
 #include "field/fe_object1_2.h"
 #include "field/fe_object1b.h"
 #include "field/fe_object10.h"
-#include "thread.h"
+#include "input/gamepad.h"
 
 /**
  * @brief Initialize the field engine's double-buffered draw/display envs.
@@ -494,12 +494,12 @@ void func_8009895C(void) {
             }
             D_8005F14A = 0;
             stopVibration(-1);
-            settlePadPorts();
+            WaitForGamePadDetection();
         }
     }
 
     stopVibration(-1);
-    settlePadPorts();
+    WaitForGamePadDetection();
     VSync(0);
 }
 
@@ -534,7 +534,7 @@ extern s32  getPadReadPressed(s32 a, s32 b);          /* per-pad newly-pressed i
 extern s32 applyButtonRemapTranslation(s32 arg); /* s32 view: input/button_remap.h's u16 (u16) masks arg and result, changing codegen */
 
 /**
- * @brief Per-tick controller-input sampling for the field engine's two pad slots.
+ * @brief Per-tick gamepad-input sampling for the field engine's two pad slots.
  *
  * Snapshots the previous held/button state (@c padHeld → @c padHeldPrev,
  * @c unk150 → @c unk154), refreshes the raw pad buffers, then re-reads the held
@@ -644,7 +644,7 @@ void func_80099348(void) {
         g_fieldEntity.unk1A5 = 0;
     }
     frames = 2;
-    requestPadSetup(0);
+    RequestActuatorSetup(0);
     func_8009A920(&D_80085224[g_fieldEntity.entityIndex[0]], D_8008538C);
 
     while (1) {

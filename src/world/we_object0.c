@@ -19,7 +19,7 @@
 #include "world/we_object10.h"
 #include "world/we_object13.h"
 #include "main.h"
-#include "thread.h"
+#include "input/gamepad.h"
 #include "btl_anim.h"
 
 #define SP_SAVE_SCRATCH(slot)                                                  \
@@ -239,7 +239,7 @@ s32 func_800987D8(void)
     func_800A246C();
     SetGeomScreen(D_800C9730);
     setHudBrightness(0x1000);
-    requestPadSetup(0);
+    RequestActuatorSetup(0);
     VSync(0);
     SetDispMask(1);
 
@@ -462,7 +462,7 @@ s32 func_800987D8(void)
     flushCdAndWait();
     func_800A6358();
     stopVibration(-1);
-    settlePadPorts();
+    WaitForGamePadDetection();
     DrawSync(0);
     ResetGraph(3);
     func_8009AD3C();

@@ -37,6 +37,8 @@ typedef union {
 #define REGALLOC_BARRIER(x)
 #endif
 #define NOP() asm("nop")
+#define STRINGIFY(x) #x
+#define MTC0(value, reg) __asm__ volatile("mtc0 %0, " STRINGIFY(reg) : : "r"(value))
 
 
 /* Clamp value to [lo, hi] range. */

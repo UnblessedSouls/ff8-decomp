@@ -5,6 +5,7 @@
 #include "gf.h"
 #include "field_init.h"
 #include "field_init_font.h"
+#include "input/gamepad.h"
 #include "psxsdk/libapi.h"
 
 /** @brief Kernel event control block entity (stride 0xC0). */
@@ -182,12 +183,12 @@ void func_80098390(void) {
 }
 
 /**
- * @brief Reset g_engine's two entities, the pad auto-repeat delays and the clip rect.
+ * @brief Reset g_engine's two entities, the pad auto-repeat delays and the mouse bounds.
  */
 void func_800983B8(void) {
-    s16 clipRect[4];
+    RECT mouseBounds;
     s32 i;
-    PadPort *port;
+    GamePad *port;
     s32 j;
     EngineState *engine = &g_engine;
 
@@ -195,27 +196,27 @@ void func_800983B8(void) {
     engine->repeatDelays.b.hi = 5;
     engine->animFlag = 0;
 
-    clipRect[0] = 0;
-    clipRect[1] = 0;
-    clipRect[2] = 320;
-    clipRect[3] = 224;
-    setBattleAnimClipRect(clipRect);
+    mouseBounds.x = 0;
+    mouseBounds.y = 0;
+    mouseBounds.w = 320;
+    mouseBounds.h = 224;
+    SetMouseBounds(&mouseBounds);
 
-    port = engine->ports;
+    port = engine->gamePads;
     i = 0;
     do {
         initPadInput(i);
-        port->field19 = 1;
-        port->unk10[0] = 0xFFF;
-        port->unk10[1] = 0x5000;
-        port->unk10[2] = 0xA000;
-        port->unk10[3] = 0x900;
+        port->actuatorSetupPending = 1;
+        port->autoRepeatButtonMasks[0] = 0xFFF;
+        port->autoRepeatButtonMasks[1] = 0x5000;
+        port->autoRepeatButtonMasks[2] = 0xA000;
+        port->autoRepeatButtonMasks[3] = 0x900;
 
         for (j = 0; j < 2; j++) {
-            port->motor[j] = 0;
+            port->vibrationIntensity[j] = 0;
         }
 
-        port->field00 = 0x40;
+        port->gamePadTransmitBuf[0] = 0x40;
 
         /* The retail code has this loop, with an empty body. */
         for (j = 0; j < 6; j++) {
@@ -223,21 +224,21 @@ void func_800983B8(void) {
         }
 
         /* volatile keeps this store on port's register, not the loop's port + 0xC2 one. */
-        *(volatile u8 *)&port->motor[0] = 0;
+        *(volatile u8 *)&port->vibrationIntensity[0] = 0;
 
         for (j = 0; j < 6; j++) {
-            port->fieldBC[j] = 0xFF;
+            port->actuatorAlign[j] = 0xFF;
         }
 
         port->vibrationMask = 0;
-        port->field0B = 0;
-        port->fieldC3 = 0x31;
-        setAnimGlobalCoords(i, 0, 0);
-        port->field0C[0] = 0;
-        port->field0C[1] = 0;
-        port->field0C[2] = 0;
-        port->field0C[3] = 0;
-        port->linkedIdx = i++;
+        port->actuatorCount = 0;
+        port->analogStickConfig = 0x31;
+        SetMousePosition(i, 0, 0);
+        port->autoRepeatCountdowns[0] = 0;
+        port->autoRepeatCountdowns[1] = 0;
+        port->autoRepeatCountdowns[2] = 0;
+        port->autoRepeatCountdowns[3] = 0;
+        port->inputSourceIndex = i++;
         port++;
     } while (i < 2);
 }

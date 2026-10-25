@@ -11,7 +11,7 @@
 #include "world/we_object10.h"
 #include "world/we_object11.h"
 #include "world/we_object9.h"
-#include "thread.h"
+#include "input/gamepad.h"
 
 /* ---- private to renderWorldMapFrame -------------------------------------
  * Direction bits of D_800D2278 (declared in we_object1.h); only this unit
@@ -21,7 +21,7 @@
 #define WORLD_PAD_XLOW   0x8000  /**< Stick/d-pad X-low (left). */
 #define WORLD_PAD_XHIGH  0x2000  /**< Stick/d-pad X-high (right). */
 
-/** Analog axes sampled per frame: X, Y and the second stick's pair, per controller. */
+/** Analog axes sampled per frame: X, Y and the second stick's pair, per gamepad. */
 #define WORLD_PAD_AXES   8
 /** @c D_800D2278 alternates between two banks so the previous frame stays readable. */
 #define WORLD_PAD_BANKS  2
@@ -235,7 +235,7 @@ extern s32              D_800C9ED4;   /**< Pad 1's raw frame parameter, packed i
 extern s32              D_800D2470;   /**< Repeat delay accumulator. */
 extern s32              D_800D2474;   /**< Repeat step counter. */
 
-/* getPadReadButtons returns u16 in thread.c, but every caller uses the result as
+/* getPadReadButtons returns u16 in gamepad.c, but every caller uses the result as
    s32 with no widening mask; thread.h documents that those callers keep their own
    declaration. applyButtonRemapTranslation is u16 (u16) in input/button_remap.h; this caller
    needs the s32 view, which the u16 prototype would mask. */
@@ -350,7 +350,7 @@ void func_800A01DC(s32 skipPresent) {
 }
 
 /**
- * @brief Sample both controllers for the frame and derive the newly-pressed mask.
+ * @brief Sample both gamepads for the frame and derive the newly-pressed mask.
  *
  * Flips @c D_800C4D04 so this frame's buttons land in the other half of
  * @c D_800D2278, leaving last frame's readable alongside. Both pads' button

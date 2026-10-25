@@ -8,7 +8,7 @@
 #include "field.h"
 #include "gamestate.h"
 #include "battle.h"
-#include "thread.h"
+#include "input/gamepad.h"
 #include "btl_anim.h"
 #include "overlay.h"
 #include "game.h"
@@ -585,7 +585,7 @@ void ff8main(void) {
         while (g_fieldEntity.mode != 4);
         sndStopAll();
         setAnimGlobalState(0);
-        settlePadPorts();
+        WaitForGamePadDetection();
         ResetGraph(3);
     }
 

@@ -3,51 +3,10 @@
 
 #include "common.h"
 #include "psxsdk/libgpu.h"
+#include "input/gamepad.h"
 #include "ui/dialog.h"
 #include "ui/countdown.h"
 #include "ui/seed_rank.h"
-
-/* Engine state shared across the battle, field, menu, and Triple Triad
- * code. g_engine is a main-RAM global (0x80082DD0); the Triple Triad overlay has
- * its own copy of the pad auto-repeat code, so it accesses these same structures.
- * Kept here (rather than battle.h) so non-battle translation units can use them
- * without depending on battle.h. */
-
-typedef struct {
-    u8 field00;
-    u8 field01;
-    u16 field02;
-    u8 params[4]; /**< 0x04-0x07: Indexed by param in func_80027FDC. */
-    u16 field08;
-    u16 field0A;
-    u16 field0C;
-    u16 field0E;
-    u16 field10;
-    u16 field12;
-} AnimFrame; /* 0x14 = 20 bytes */
-
-/** @brief The state of one controller port. */
-typedef struct {
-    u8 field00;
-    u8 field01; /**< motor[0] masked by vibrationMask, shifted right by field08 (stepPadPort). */
-    u8 field02; /**< motor[1] masked by vibrationMask, shifted right by field09 (stepPadPort). */
-    u8 pad03[3];
-    u8 motor[2]; /**< Vibration motor levels, 0-255. */
-    u8 field08; /**< Shift amount applied to motor[0] in stepPadPort. */
-    u8 field09; /**< Shift amount applied to motor[1] in stepPadPort. */
-    u8 field0A;
-    u8 field0B;
-    s8 field0C[4];
-    u16 unk10[4]; /**< Pad-button mask of each of the four auto-repeat channels. */
-    u8 frameCounter;
-    s8 field19;   /**< Read back as a signed byte in stepPadPort. */
-    s8 field1A;
-    u8 vibrationMask; /**< 0xFF with vibration on, 0 with it off. */
-    AnimFrame frames[8];
-    u8 fieldBC[6];
-    u8 linkedIdx;
-    u8 fieldC3;
-} PadPort;
 
 #define OT_SIZE 18
 
@@ -85,14 +44,13 @@ typedef struct {
 
 /** @brief Engine state every module shares: display lists, message windows, the HUD and more. */
 typedef struct {
-    /* 0x000 */ PadPort ports[2]; /**< The two controller ports. */
-    /* 0x188 */ u8 cdBufA[0x24];             /**< CD audio buffer A. */
-    /* 0x1AC */ u8 cdBufB[0x24];             /**< CD audio buffer B. */
-    /* 0x1D0 */ s16 globalCoords[2][2];      /**< Per-slot coords [slot][axis]. */
-    /* 0x1D8 */ u16 clipLeft;               /**< Clip region left edge. */
-    /* 0x1DA */ u16 clipTop;                /**< Clip region top edge. */
-    /* 0x1DC */ u16 clipRight;              /**< Clip region right edge. */
-    /* 0x1DE */ u16 clipBottom;             /**< Clip region bottom edge. */
+    /* 0x000 */ GamePad gamePads[2];
+    /* 0x188 */ u8 gamePadReceiveBuf[2][0x24]; // what each pad sent back, stored by libpad every VSync
+    /* 0x1D0 */ s16 mousePositions[2][2]; /**< Mouse cursor position per gamepad, [gamepad][axis]. */
+    /* 0x1D8 */ s16 mouseBoundsLeft;
+    /* 0x1DA */ s16 mouseBoundsTop;
+    /* 0x1DC */ s16 mouseBoundsRight;
+    /* 0x1DE */ s16 mouseBoundsBottom;
     /* 0x1E0 */ U16Split repeatDelays;       /**< Pad auto-repeat timing (autoRepeatPadChannel): restart delay in @c b.lo, repeat interval in @c b.hi. */
     /* 0x1E2 */ u8 pad1E2; /**< Unknown. */
     /* 0x1E3 */ u8 animFlag; /**< Also addressed directly as @c g_animFlag. */

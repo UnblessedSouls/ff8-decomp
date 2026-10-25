@@ -128,7 +128,7 @@ void func_80099FA0() {
 void func_80099FE8(void) {
     s32 i;
 
-    settlePadPorts();
+    WaitForGamePadDetection();
     func_8009B428();
 
     D_800ED148.unk5C3 = 1;
