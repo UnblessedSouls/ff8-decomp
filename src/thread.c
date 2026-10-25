@@ -13,6 +13,7 @@ static void func_800270B0(EngineState *engine, GamePad *gamePad, s32 port);
 static void UpdateGamePad(EngineState *engine, GamePad *gamePad, s32 port);
 static void UpdateGamePads(EngineState *engine);
 static u16 getPadReadReleased(s32 idx, s32 offset);
+static inline GamePadInputFrame *GetHistoricalFrame(s32 idx, s32 offset);
 
 /**
  * @brief Open a thread with interrupt protection.
@@ -478,83 +479,28 @@ void func_800275D4(void) {
     }
 }
 
-
-/**
- * @brief Get the held buttons of a past read on the port linked to port @p idx.
- * @param idx Port index (masked to 0 or 1).
- * @param offset How many reads back to look.
- * @return The held-button word.
- * @note The reads are a ring of eight, indexed by (frameCounter - offset) & 7.
- */
-u16 getPadReadButtons(s32 idx, s32 offset) {
+static inline GamePadInputFrame *GetHistoricalFrame(s32 idx, s32 offset) {
     GamePad *gamePad;
-    GamePadInputFrame *frame;
     idx &= 1; // & 1 is same as % 2 (gamePads size is 2)
     gamePad = &g_engine.gamePads[g_engine.gamePads[idx].inputSourceIndex];
-    frame = &gamePad->frames[(gamePad->frameCounter - offset) & 7]; // & 7 is basically modulo 8. (The input ring buffer is size 8)
-    return frame->currentlyPressedButtons;
+    return &gamePad->frames[(gamePad->frameCounter - offset) & 7]; // & 7 is basically modulo 8. (The input ring buffer is size 8)
 }
 
+u16 getPadReadButtons(s32 idx, s32 offset) {
+    return GetHistoricalFrame(idx, offset)->currentlyPressedButtons;
+}
 
-/**
- * @brief Get the auto-repeated buttons of a past read on the port linked to port @p idx.
- * @param idx Port index (masked to 0 or 1).
- * @param offset How many reads back to look.
- * @return The four auto-repeat channels' bits (autoRepeatedButtons), ORed.
- */
 u16 getPadReadRepeat(s32 idx, s32 offset) {
-    GamePad *ports;
-    GamePad *port;
-    GamePad *linked;
-    s32 sub_idx;
-    GamePadInputFrame *frame;
-    idx &= 1;
-    ports = g_engine.gamePads;
-    port = ports + idx;
-    linked = ports + port->inputSourceIndex;
-    sub_idx = (linked->frameCounter - offset) & 7;
-    frame = &linked->frames[sub_idx];
+    GamePadInputFrame *frame = GetHistoricalFrame(idx, offset);
     return frame->autoRepeatedButtons[0] | frame->autoRepeatedButtons[1] | frame->autoRepeatedButtons[2] | frame->autoRepeatedButtons[3];
 }
 
-
-/**
- * @brief Get the buttons newly pressed in a past read on the port linked to port @p idx.
- * @param idx Port index (only bit 0 used).
- * @param offset How many reads back to look.
- * @return field10: the buttons held in that read but not in the one before.
- */
 u16 getPadReadPressed(s32 idx, s32 offset) {
-    GamePad *ports;
-    GamePad *port;
-    GamePad *linked;
-    s32 sub_idx;
-    idx &= 1;
-    ports = g_engine.gamePads;
-    port = ports + idx;
-    linked = ports + port->inputSourceIndex;
-    sub_idx = (linked->frameCounter - offset) & 7;
-    return (linked->frames + sub_idx)->newlyPressedButtons;
+    return GetHistoricalFrame(idx, offset)->newlyPressedButtons;
 }
 
-
-/**
- * @brief Get the buttons newly released in a past read on the port linked to port @p idx.
- * @param idx Port index (only bit 0 used).
- * @param offset How many reads back to look.
- * @return field12: the buttons held in the read before but not in that one.
- */
 static u16 getPadReadReleased(s32 idx, s32 offset) {
-    GamePad *ports;
-    GamePad *port;
-    GamePad *linked;
-    s32 sub_idx;
-    idx &= 1;
-    ports = g_engine.gamePads;
-    port = ports + idx;
-    linked = ports + port->inputSourceIndex;
-    sub_idx = (linked->frameCounter - offset) & 7;
-    return (linked->frames + sub_idx)->newlyReleasedButtons;
+    return GetHistoricalFrame(idx, offset)->newlyReleasedButtons;
 }
 
 
