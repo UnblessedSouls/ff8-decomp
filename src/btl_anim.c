@@ -38,13 +38,13 @@ extern u8 g_paletteIndices[];
 /**
  * @brief Initialize GPU display and clear engine state fields.
  *
- * Calls GsInitGraph, GsDefDispBuff, and initCdAnimSubsystem, then
+ * Calls GsInitGraph, GsDefDispBuff, and InitGamePadSystem, then
  * resets display state fields.
  */
 void initBattleDisplay(void) {
     func_800982D8();
     func_800980D0();
-    initCdAnimSubsystem();
+    InitGamePadSystem();
     g_engine.field6FC = 0;
     g_engine.field9C2 = 0x4611;
     g_engine.field9C8 = 0;
@@ -1491,7 +1491,7 @@ void shutdownCardSubsystem(void) {
 
 void initBattleSubsystems(void) {
     WaitForGamePadDetection();
-    func_8003ABA4();
+    PadStopCom();
 }
 
 

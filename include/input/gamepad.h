@@ -50,12 +50,13 @@ void SetSwapAnalogSticks(s32 idx, s32 enabled);
 void RequestActuatorSetup(s32 idx);
 s32 GetActuatorCountForGamePad(s32 idx);
 s32 IsFirstGamePadConnected(void);
-s32 getAnimGlobalState(void);
-s32 setAnimGlobalState(s32 value);
+s32 IsPlayTimePaused(void);
+s32 SetPlayTimePaused(s32 value);
 void SetVibrationIntensity(s32 idx, s32 largeMotor, s32 smallMotor);
 void SetVibrationEnabled(s32 idx, s32 enabled);
 void SetAutoRepeatButtonMask(s32 unused, s32 buttonGroup, s32 mask);
-void initCdAnimSubsystem(void);
+void ResetGamePadInput(s32 idx);
+void InitGamePadSystem(void);
 void SetMouseBounds(RECT *rect);
 void SetMousePosition(s32 idx, s16 x, s16 y);
 

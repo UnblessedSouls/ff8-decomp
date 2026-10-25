@@ -47,10 +47,9 @@ static s32 GetMouseDeltaMovement(s32 idx, s32 axis, s32 frameOffset);
 static s32 GetGamePadType(s32 idx, s32 frameOffset);
 static void ResetInputHistory(s32 idx, u16 buttons);
 static s16 GetMousePosition(s32 idx, s32 axis);
-
-extern u8 g_animInitialized;
-extern u8 g_animFlag;
-extern u16 g_animState;
+static void EnableGamePadInput(void);
+static void DisableGamePadInput(void);
+static void SetAllowSecondGamePadInput(s32 value);
 
 static s32 UpdateAutoRepeatForGroup(EngineState *engine, GamePad *gamePad, u16 previousButtons, u16 currentButtons, s32 buttonGroup) {
     s32 counter;
@@ -350,7 +349,7 @@ void RecordGamePadInput(void) {
                 if ((currentButtons & (PADLup | PADLdown)) == (PADLup | PADLdown)) {
                     currentButtons &= ~(PADLup | PADLdown);
                 }
-                if (engine->animFlag != 0 && i == 0 && currentButtons == 0) {
+                if (engine->allowSecondGamePadInput != 0 && i == 0 && currentButtons == 0) {
                     if (gamePadType == GAMEPAD_TYPE_ANALOG_CONTROLLER || gamePadType == GAMEPAD_TYPE_ANALOG_JOYSTICK) {
                         frame = (GamePadInputFrame *)receiveBuf;
                         stickX = frame->analog[0] - 0x80;
@@ -378,7 +377,7 @@ void RecordGamePadInput(void) {
                     engine->mousePositions[i][1] = mouseY;
                 }
             }
-            if (engine->pad1E2 == 0) {
+            if (engine->buttonsEnabled == 0) {
                 currentButtons = 0;
                 previousButtons = 0;
             }
@@ -760,28 +759,27 @@ static void ResetInputHistory(s32 idx, u16 buttons) {
 
 
 /**
- * @brief Reset a pad port's auto-repeat countdowns and reads.
+ * @brief Reset a gamepad's auto-repeat countdowns and input history.
  *
- * Sets the four field0C entries, the per-channel pad auto-repeat countdowns, to the
- * restart delay g_engine.repeatDelays.b.lo, then
- * calls ResetInputHistory to clear its reads.
+ * Sets the gamepad's four autoRepeatCountdowns to the restart delay
+ * g_engine.repeatDelays.b.lo, then calls ResetInputHistory to clear its reads.
  *
- * @param idx Port index (0 or 1).
+ * @param idx Gamepad index (0 or 1).
  */
-void initPadInput(s32 idx) {
-    GamePad *port = &g_engine.gamePads[idx];
-    port->autoRepeatCountdowns[0] = g_engine.repeatDelays.b.lo;
-    port->autoRepeatCountdowns[1] = g_engine.repeatDelays.b.lo;
-    port->autoRepeatCountdowns[2] = g_engine.repeatDelays.b.lo;
-    port->autoRepeatCountdowns[3] = g_engine.repeatDelays.b.lo;
+void ResetGamePadInput(s32 idx) {
+    GamePad *gamePad = &g_engine.gamePads[idx];
+    gamePad->autoRepeatCountdowns[0] = g_engine.repeatDelays.b.lo;
+    gamePad->autoRepeatCountdowns[1] = g_engine.repeatDelays.b.lo;
+    gamePad->autoRepeatCountdowns[2] = g_engine.repeatDelays.b.lo;
+    gamePad->autoRepeatCountdowns[3] = g_engine.repeatDelays.b.lo;
     ResetInputHistory(idx, 0);
 }
 
 
-void initAnimStateAndWait(void) {
+static void EnableGamePadInput(void) {
     s32 i;
 
-    g_animInitialized = 1;
+    g_engine.buttonsEnabled = 1;
     for (i = 0; i < 2; i++) {
         ResetInputHistory(i, 0);
     }
@@ -796,52 +794,46 @@ void initAnimStateAndWait(void) {
 }
 
 
-void resetAnimState(void) {
+static void DisableGamePadInput(void) {
     s32 i;
-    g_animInitialized = 0;
+    g_engine.buttonsEnabled = 0;
     PadEnableCom(0);
     for (i = 0; i < 2; i++) {
         ResetInputHistory(i, 0);
     }
 }
 
-
-/** @brief Get the current value of g_animState (global u16 state variable). */
-s32 getAnimGlobalState(void) {
-    return g_animState;
+s32 IsPlayTimePaused(void) {
+    return g_engine.playTimePaused;
 }
 
-
 /**
- * @brief Set g_animState to a new value.
- * @param value Value to store.
+ * @brief Pause or resume play time.
+ * @param value Nonzero to pause it, 0 to resume.
  * @return The value that was set.
  */
-s32 setAnimGlobalState(s32 value) {
-    g_animState = value;
+s32 SetPlayTimePaused(s32 value) {
+    g_engine.playTimePaused = value;
     return value;
 }
 
-
 /**
- * @brief Set the global flag g_animFlag.
- * @param value Value to store in g_animFlag.
+ * @brief Let gamepad 2 take over gamepad 1's input while gamepad 1 is idle, or stop it.
+ * @param value Nonzero to allow it, 0 to stop it.
  */
-void setAnimFlag(s32 value) {
-    g_animFlag = value;
+static void SetAllowSecondGamePadInput(s32 value) {
+    g_engine.allowSecondGamePadInput = value;
 }
 
 
 /**
- * @brief Initialize or reset the CD audio/streaming subsystem state.
- * @note Calls several initialization functions and resets a counter at g_engine + 0x9C4 to 0.
- *       Passes two g_engine buffer pointers (offsets 0x188 and 0x1AC) to PadInitDirect.
+ * @brief Start the gamepad system.
  */
-void initCdAnimSubsystem(void) {
+void InitGamePadSystem(void) {
     EngineState *bas = &g_engine;
     func_800982B8();
     PadInitDirect(bas->gamePadReceiveBuf[0], bas->gamePadReceiveBuf[1]);
-    func_8003AB84();
-    initAnimStateAndWait();
-    bas->cdStreamCounter = 0;
+    PadStartCom();
+    EnableGamePadInput();
+    bas->playTimePaused = 0;
 }
