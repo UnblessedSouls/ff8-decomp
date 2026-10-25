@@ -426,53 +426,40 @@ static u16 getPadReadReleased(s32 idx, s32 offset) {
 
 
 /**
- * @brief Compute angle from (a0, a1) with special-case axis handling.
+ * @brief Compute angle from (x, y)
  *
- * Returns a fixed angle when either component is zero:
- * - (0, <=0): 0xC00 (270 degrees)
- * - (0, >0):  0x400 (90 degrees)
- * - (<0, 0):  0x800 (180 degrees)
- * - (>0, 0):  0x000 (0 degrees)
- * Otherwise delegates to ratan2.
- *
- * @param a0 X component (horizontal).
- * @param a1 Y component (vertical).
+ * @param x X component (horizontal).
+ * @param y Y component (vertical).
  * @return Angle in fixed-point (0x1000 = 360 degrees).
  */
-// Original devs possibly forgot to make it static
-inline s32 computeAngle(s32 a0, s32 a1) {
+inline s32 CalculateVectorAngle(s32 x, s32 y) { // Original devs possibly forgot to make it static
     s32 angle;
 
-    if (a0 == 0) {
+    if (x == 0) {
         angle = 0xC00;
-        if (a1 > 0) {
+        if (y > 0) {
             angle = 0x400;
         }
-    } else if (a1 == 0) {
-        angle = (a0 < 1) << 11;
+    } else if (y == 0) {
+        angle = (x < 1) << 11;
     } else {
-        angle = ratan2(a0, a1);
+        angle = ratan2(x, y);
     }
     return angle;
 }
 
 
 /**
- * @brief Map an angle to a quadrant bit mask.
+ * @brief Map an angle to d-pad direction
  *
- * Rotates the angle by -0x600, inverts it, and reduces the result to a
- * quadrant index 0-3 (each quadrant spanning 0x400 units), returning a
- * single bit in the range 0x1000-0x8000.
- *
- * @param a0 Angle in fixed-point (0x1000 = 360 degrees).
- * @return 1 << (quadrant + 12).
+ * @param angle Angle in fixed-point (4096 = 360 degrees).
+ * @return The d-pad button bit for the angle's direction (PADLup, PADLright, PADLdown or PADLleft).
  */
-// Original devs possibly forgot to make it static
-inline s32 func_80027B7C(s32 a0) {
-    s32 v = a0 + 0x600;
+inline s32 AngleToDPadButton(s32 angle) { // Original devs possibly forgot to make it static
+    s32 v = angle + 1536;
     v = ~v & 0xFFF;
-    v = v / 0x400;
-    return 1 << (v + 0xC);
+    v = v / 1024;
+    return 1 << (v + 12);
 }
 
 /**
@@ -541,7 +528,7 @@ s32 func_80027CF8(s32 a, s32 b, s32 c) {
     if (b * b + c * c < zone) {
         return 0;
     }
-    bits = func_80027B7C(computeAngle(b, c));
+    bits = AngleToDPadButton(CalculateVectorAngle(b, c));
     return bits;
 }
 
