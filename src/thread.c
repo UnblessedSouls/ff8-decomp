@@ -487,16 +487,12 @@ void func_800275D4(void) {
  * @note The reads are a ring of eight, indexed by (frameCounter - offset) & 7.
  */
 u16 getPadReadButtons(s32 idx, s32 offset) {
-    GamePad *ports;
-    GamePad *port;
-    GamePad *linked;
-    s32 sub_idx;
-    idx &= 1;
-    ports = g_engine.gamePads;
-    port = ports + idx;
-    linked = ports + port->inputSourceIndex;
-    sub_idx = (linked->frameCounter - offset) & 7;
-    return (linked->frames + sub_idx)->currentlyPressedButtons;
+    GamePad *gamePad;
+    GamePadInputFrame *frame;
+    idx &= 1; // & 1 is same as % 2 (gamePads size is 2)
+    gamePad = &g_engine.gamePads[g_engine.gamePads[idx].inputSourceIndex];
+    frame = &gamePad->frames[(gamePad->frameCounter - offset) & 7]; // & 7 is basically modulo 8. (The input ring buffer is size 8)
+    return frame->currentlyPressedButtons;
 }
 
 
