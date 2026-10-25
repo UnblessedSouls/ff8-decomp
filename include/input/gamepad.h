@@ -33,7 +33,7 @@ typedef struct {
 
 #define PAD_PORT_SWAP_ANALOG_STICKS 0x80
 
-extern void func_800275D4(void);
+void func_800275D4(void);
 
 typedef enum {
     PAD_AXIS_X2 = 0,
@@ -42,20 +42,18 @@ typedef enum {
     PAD_AXIS_Y  = 3
 } PadAxis;
 
-extern s32 func_80027DB4(s32 pad, s32 axis, s32 c);
-
-extern s32  func_80027CF8(s32 a, s32 b, s32 c);
-
-extern void settlePadPorts(void);
-extern s32 getPadVibration(s32 idx);
-extern void setPadDeadZone(s32 a0, s32 a1);
-extern void setPadAnalogFlag(s32 a0, s32 a1);
+s32 func_80027DB4(s32 pad, s32 axis, s32 c);
+s32 func_80027CF8(s32 a, s32 b, s32 c);
+void settlePadPorts(void);
+s32 getPadVibration(s32 idx);
+void setPadDeadZone(s32 a0, s32 a1);
+void setPadAnalogFlag(s32 a0, s32 a1);
 void requestPadSetup(s32 idx);
-extern s32 getAnimGlobalState(void);
-extern s32 setAnimGlobalState(s32 value);
-extern void setPadMotors(s32 idx, s32 motor1, s32 motor0);
-extern void setPadVibration(s32 idx, s32 val);
-extern void setPadRepeatMask(s32 unused, s32 channel, s32 mask);
-extern void initCdAnimSubsystem(void);
+s32 getAnimGlobalState(void);
+s32 setAnimGlobalState(s32 value);
+void setPadMotors(s32 idx, s32 motor1, s32 motor0);
+void setPadVibration(s32 idx, s32 val);
+void setPadRepeatMask(s32 unused, s32 channel, s32 mask);
+void initCdAnimSubsystem(void);
 
 #endif /* INPUT_GAMEPAD_H */
