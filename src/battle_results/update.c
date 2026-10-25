@@ -323,8 +323,8 @@ void updateResults(void) {
     u16 state;
 
     RecordGamePadInput();
-    pressed = applyButtonRemapTranslation(getPadReadPressed(0, 0));
-    applyButtonRemapTranslation(getPadReadRepeat(0, 0));
+    pressed = applyButtonRemapTranslation(GetNewlyPressedButtons(0, 0));
+    applyButtonRemapTranslation(GetAutoRepeatedButtons(0, 0));
     if (ctx->messageProgress != 0) {
         ctx->messageProgress += 0x200;
         if (ctx->messageProgress > 0x1000) {

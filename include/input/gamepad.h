@@ -32,8 +32,6 @@ typedef struct {
     u8 analogStickConfig; // bits 0-6 = value of analog deadzone, bit 7 swaps which analog stick should be used
 } GamePad;
 
-#define PAD_PORT_SWAP_ANALOG_STICKS 0x80
-
 void RecordGamePadInput(void);
 
 typedef enum {
@@ -43,22 +41,22 @@ typedef enum {
     PAD_AXIS_Y  = 3
 } PadAxis;
 
-s32 func_80027DB4(s32 pad, s32 axis, s32 c);
-s32 func_80027CF8(s32 a, s32 b, s32 c);
+s32 GetAnalogStickAxis(s32 idx, s32 axis, s32 offset);
+s32 StickToDPadButton(s32 idx, s32 x, s32 y);
 void WaitForGamePadDetection(void);
-s32 getPadVibration(s32 idx);
-void setPadDeadZone(s32 a0, s32 a1);
-void setPadAnalogFlag(s32 a0, s32 a1);
+s32 IsVibrationEnabled(s32 idx);
+void SetStickDeadZone(s32 idx, s32 deadZoneLevel);
+void SetSwapAnalogSticks(s32 idx, s32 enabled);
 void RequestActuatorSetup(s32 idx);
 s32 GetActuatorCountForGamePad(s32 idx);
+s32 IsFirstGamePadConnected(void);
 s32 getAnimGlobalState(void);
 s32 setAnimGlobalState(s32 value);
-void setPadMotors(s32 idx, s32 motor1, s32 motor0);
-void setPadVibration(s32 idx, s32 val);
+void SetVibrationIntensity(s32 idx, s32 largeMotor, s32 smallMotor);
+void SetVibrationEnabled(s32 idx, s32 enabled);
 void setPadRepeatMask(s32 unused, s32 channel, s32 mask);
 void initCdAnimSubsystem(void);
 void SetMouseBounds(RECT *rect);
-s16 GetMousePosition(s32 idx, s32 axis);
 void SetMousePosition(s32 idx, s16 x, s16 y);
 
 #endif /* INPUT_GAMEPAD_H */

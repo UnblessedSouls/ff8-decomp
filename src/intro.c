@@ -10,8 +10,8 @@
 #include "psxsdk/libetc.h"
 #include "psxsdk/libcd.h"
 
-/* s32 view of gamepad.c's u16 getPadReadButtons; see gamepad.h. */
-extern s32 getPadReadButtons(s32 slot, s32 sub);
+/* s32 view of gamepad.c's u16 GetPressedButtons; see gamepad.h. */
+extern s32 GetPressedButtons(s32 slot, s32 sub);
 
 /**
  * @brief Display-init overlay entry point — set up display + run 60-frame intro.
@@ -92,7 +92,7 @@ void initIntroOverlay(void) {
  *  - Submit the current buffer's OT via @c DrawOTag, flip @c currBuf,
  *    install the next frame's @c DRAWENV / @c DISPENV pair, and clear
  *    the newly-active OT for the next pass.
- *  - Sample the gamepads (@c getPadReadButtons slots 0 and 1) and
+ *  - Sample the gamepads (@c GetPressedButtons slots 0 and 1) and
  *    update the edge-detect mirrors at @c g_introCtrl0Edge (slot 0 rising
  *    edges) and @c g_introCtrl1Edge (slot 1 rising edges) using the
  *    @c g_introCtrl0Inv / @c g_introCtrl1Inv complements latched last frame.
@@ -126,8 +126,8 @@ void func_8009818C(void) {
     ClearOTagR(&g_introDispCtx.ot[g_introDispCtx.currBuf], 1);
 
     RecordGamePadInput();
-    g_introCtrl0 = getPadReadButtons(0, 0);
-    g_introCtrl1 = getPadReadButtons(1, 0);
+    g_introCtrl0 = GetPressedButtons(0, 0);
+    g_introCtrl1 = GetPressedButtons(1, 0);
 
     g_introCtrl0Edge = g_introCtrl0Inv & g_introCtrl0;
     g_introCtrl1Edge = g_introCtrl1Inv & g_introCtrl1;

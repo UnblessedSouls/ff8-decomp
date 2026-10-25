@@ -722,22 +722,22 @@ void readPads(void)
 
     RecordGamePadInput();
 
-    padRaw = applyButtonRemapTranslation(getPadReadButtons(0, 0));
+    padRaw = applyButtonRemapTranslation(GetPressedButtons(0, 0));
     oldPad = D_801D4B20[0];
-    held = func_80027DB4(0, PAD_AXIS_X, 0);
+    held = GetAnalogStickAxis(0, PAD_AXIS_X, 0);
     if (!(padRaw & 0xF000) && held >= 0) {
-        padRaw |= func_80027CF8(0, held - 0x80, func_80027DB4(0, PAD_AXIS_Y, 0) - 0x80);
+        padRaw |= StickToDPadButton(0, held - 0x80, GetAnalogStickAxis(0, PAD_AXIS_Y, 0) - 0x80);
     }
     D_801D4B20[0] = padRaw;
     D_801D4B30[0] = (padRaw ^ oldPad) & padRaw;
     repeat = func_800A2A8C(0, padRaw & 0xFFFF) & 0xFFFF;
     D_801D4B28[0] = repeat;
 
-    padRaw = applyButtonRemapTranslation(getPadReadButtons(1, 0));
+    padRaw = applyButtonRemapTranslation(GetPressedButtons(1, 0));
     oldPad = D_801D4B20[1];
-    held = func_80027DB4(1, PAD_AXIS_X, 0);
+    held = GetAnalogStickAxis(1, PAD_AXIS_X, 0);
     if (!(padRaw & 0xF000) && held >= 0) {
-        padRaw |= func_80027CF8(0, held - 0x80, func_80027DB4(1, PAD_AXIS_Y, 0) - 0x80);
+        padRaw |= StickToDPadButton(0, held - 0x80, GetAnalogStickAxis(1, PAD_AXIS_Y, 0) - 0x80);
     }
     D_801D4B24 = padRaw;
     D_801D4B34 = (padRaw ^ oldPad) & padRaw;

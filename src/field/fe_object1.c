@@ -528,8 +528,8 @@ void func_8009912C(void) {
     renderAndUpdateDisplay(1);
 }
 
-extern s32  getPadReadButtons(s32 slot, s32 sub); /* per-pad held buttons (s32 view) */
-extern s32  getPadReadPressed(s32 a, s32 b);          /* per-pad newly-pressed input */
+extern s32  GetPressedButtons(s32 slot, s32 sub); /* per-pad held buttons (s32 view) */
+extern s32  GetNewlyPressedButtons(s32 a, s32 b);          /* per-pad newly-pressed input */
 // TODO: Drop this and include the prototype from the owner.
 extern s32 applyButtonRemapTranslation(s32 arg); /* s32 view: input/button_remap.h's u16 (u16) masks arg and result, changing codegen */
 
@@ -538,11 +538,11 @@ extern s32 applyButtonRemapTranslation(s32 arg); /* s32 view: input/button_remap
  *
  * Snapshots the previous held/button state (@c padHeld → @c padHeldPrev,
  * @c unk150 → @c unk154), refreshes the raw pad buffers, then re-reads the held
- * (@c getPadReadButtons) and pressed (@c getPadReadPressed) input for slots 0 and 1.
+ * (@c GetPressedButtons) and pressed (@c GetNewlyPressedButtons) input for slots 0 and 1.
  *
  * When slot 0 has no direction bits latched yet (@c padHeld & 0xF000 == 0) and a
  * pad is present, it converts the two analog axes into direction bits: X read
- * (@c func_80027DB4 axis 2) sets 0x8000 when @c <0x40 or 0x2000 when @c >=0xC1,
+ * (@c GetAnalogStickAxis axis 2) sets 0x8000 when @c <0x40 or 0x2000 when @c >=0xC1,
  * Y read (axis 3) sets 0x1000 / 0x4000. Each bit is OR'd into @c padHeld always
  * and into @c padPressed only when it was not held last tick (edge detect).
  *
@@ -555,13 +555,13 @@ void func_80099180(void) {
     g_fieldEntity.padHeldPrev = g_fieldEntity.padHeld;
     g_fieldEntity.unk154 = g_fieldEntity.unk150;
     RecordGamePadInput();
-    g_fieldEntity.padHeld = getPadReadButtons(0, 0);
-    g_fieldEntity.padPressed = getPadReadPressed(0, 0);
-    g_fieldEntity.field_0x160 = getPadReadButtons(1, 0);
-    g_fieldEntity.field_0x168 = getPadReadPressed(1, 0);
+    g_fieldEntity.padHeld = GetPressedButtons(0, 0);
+    g_fieldEntity.padPressed = GetNewlyPressedButtons(0, 0);
+    g_fieldEntity.field_0x160 = GetPressedButtons(1, 0);
+    g_fieldEntity.field_0x168 = GetNewlyPressedButtons(1, 0);
 
-    if (!(g_fieldEntity.padHeld & 0xF000) && func_80027DB4(0, PAD_AXIS_X, 0) != -1) {
-        r = (s16)func_80027DB4(0, PAD_AXIS_X, 0);
+    if (!(g_fieldEntity.padHeld & 0xF000) && GetAnalogStickAxis(0, PAD_AXIS_X, 0) != -1) {
+        r = (s16)GetAnalogStickAxis(0, PAD_AXIS_X, 0);
         if (r < 0x40) {
             g_fieldEntity.padHeld |= 0x8000;
             if (!(g_fieldEntity.padHeldPrev & 0x8000)) g_fieldEntity.padPressed |= 0x8000;
@@ -569,7 +569,7 @@ void func_80099180(void) {
             g_fieldEntity.padHeld |= 0x2000;
             if (!(g_fieldEntity.padHeldPrev & 0x2000)) g_fieldEntity.padPressed |= 0x2000;
         }
-        r = (s16)func_80027DB4(0, PAD_AXIS_Y, 0);
+        r = (s16)GetAnalogStickAxis(0, PAD_AXIS_Y, 0);
         if (r < 0x40) {
             g_fieldEntity.padHeld |= 0x1000;
             if (!(g_fieldEntity.padHeldPrev & 0x1000)) g_fieldEntity.padPressed |= 0x1000;
@@ -1866,9 +1866,9 @@ void func_8009BEC8(Actor *ents, s32 flags) {
         if (g_fieldEntity.unk015 == 1 || g_fieldEntity.dialogState == 4) {
             continue;
         }
-        if (func_80027DB4(0, PAD_AXIS_X, 0) != -1) {
-            b.vx = 0x80 - func_80027DB4(0, PAD_AXIS_X, 0);
-            b.vy = func_80027DB4(0, PAD_AXIS_Y, 0) - 0x80;
+        if (GetAnalogStickAxis(0, PAD_AXIS_X, 0) != -1) {
+            b.vx = 0x80 - GetAnalogStickAxis(0, PAD_AXIS_X, 0);
+            b.vy = GetAnalogStickAxis(0, PAD_AXIS_Y, 0) - 0x80;
             a.vx = 0;
             a.vy = 0;
             dir = func_8009A0E8((s32 *)&a, (s32 *)&b, dist);

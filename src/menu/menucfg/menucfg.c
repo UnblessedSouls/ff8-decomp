@@ -91,7 +91,7 @@ static s32 func_801E5820(CfgContext *arg0)
  * @brief Initialize config menu availability flags.
  *
  * Sets both availability flags, then clears whichever the hardware does not
- * support. @c func_80027DB4 reads an analog axis, so a negative result means no
+ * support. @c GetAnalogStickAxis reads an analog axis, so a negative result means no
  * analog pad answered and @c flag_2E is cleared. @c flag_2D is cleared unless a
  * battle animation is both active and reports a nonzero field 0x0B.
  *
@@ -101,10 +101,10 @@ static void func_801E587C(CfgContext *cfg) {
     s32 val = 1;
     cfg->flag_2E = val;
     cfg->flag_2D = val;
-    if (func_80027DB4(0, PAD_AXIS_X2, 0) < 0) {
+    if (GetAnalogStickAxis(0, PAD_AXIS_X2, 0) < 0) {
         cfg->flag_2E = 0;
     }
-    if (isPadConnected() == 0 || GetActuatorCountForGamePad(0) == 0) {
+    if (IsFirstGamePadConnected() == 0 || GetActuatorCountForGamePad(0) == 0) {
         cfg->flag_2D = 0;
     }
 }

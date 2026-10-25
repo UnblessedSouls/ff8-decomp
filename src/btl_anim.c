@@ -23,8 +23,8 @@
 void callCdTick(void);
 void shutdownCardSubsystem(void);
 void initBattleSubsystems(void);
-s32 getPadReadButtons(s32, s32);
-s32 getPadReadRepeat(s32, s32);
+s32 GetPressedButtons(s32, s32);
+s32 GetAutoRepeatedButtons(s32, s32);
 
 extern CardDataBlock g_cardData;
 extern s8 g_cardFlag; /**< D_80082FD4: Memory card operation status flag. */
@@ -1810,26 +1810,26 @@ void processBattleAnimFrames(s32 frameCount, s32 mode) {
     if (mode == 1) {
         EnterCriticalSection();
         for (i = count; i >= 0; i--) {
-            param = applyButtonRemapTranslation(getPadReadButtons(0, i) & 0xFFFF) & 0xFFFF;
+            param = applyButtonRemapTranslation(GetPressedButtons(0, i) & 0xFFFF) & 0xFFFF;
             if ((param & 0xF000) == 0) {
-                val = func_80027DB4(0, PAD_AXIS_X, i);
+                val = GetAnalogStickAxis(0, PAD_AXIS_X, i);
                 if (val >= 0) {
-                    param |= func_80027CF8(0, val - 128, func_80027DB4(0, PAD_AXIS_Y, i) - 128);
+                    param |= StickToDPadButton(0, val - 128, GetAnalogStickAxis(0, PAD_AXIS_Y, i) - 128);
                 }
             }
-            param |= applyButtonRemapTranslation(getPadReadPressed(0, i) & 0xFFFF) << 16;
+            param |= applyButtonRemapTranslation(GetNewlyPressedButtons(0, i) & 0xFFFF) << 16;
             j = i;
             frameData[j] = param;
-            statusData[j] = applyButtonRemapTranslation(getPadReadRepeat(0, j) & 0xFFFF) & 0xFFFF;
+            statusData[j] = applyButtonRemapTranslation(GetAutoRepeatedButtons(0, j) & 0xFFFF) & 0xFFFF;
         }
         ExitCriticalSection();
     } else {
         EnterCriticalSection();
-        param = applyButtonRemapTranslation(getPadReadButtons(0, 0) & 0xFFFF) & 0xFFFF;
-        upperBits = applyButtonRemapTranslation(getPadReadPressed(0, 0) & 0xFFFF) << 16;
-        val = func_80027DB4((0, 0), PAD_AXIS_X, 0);
+        param = applyButtonRemapTranslation(GetPressedButtons(0, 0) & 0xFFFF) & 0xFFFF;
+        upperBits = applyButtonRemapTranslation(GetNewlyPressedButtons(0, 0) & 0xFFFF) << 16;
+        val = GetAnalogStickAxis((0, 0), PAD_AXIS_X, 0);
         if (((param & 0xF000) == 0) && (val >= 0)) {
-            param |= func_80027CF8(0, val - 128, func_80027DB4(0, PAD_AXIS_Y, 0) - 128);
+            param |= StickToDPadButton(0, val - 128, GetAnalogStickAxis(0, PAD_AXIS_Y, 0) - 128);
         }
         ExitCriticalSection();
         i = count;
@@ -2070,8 +2070,8 @@ void initBattleAnimSystem(s32 vramBase, s32 vramSize)
     buildAnimEasingCurves();
     resetCountdownDisplay();
     initVibration();
-    setPadVibration(0, 0);
-    setPadVibration(1, 0);
+    SetVibrationEnabled(0, 0);
+    SetVibrationEnabled(1, 0);
     initButtonRemap();
     resetSeedRankNotification();
     resetGauges();

@@ -13,40 +13,40 @@ void intToDecStringShort(s32, u8 *, s32);
 void replaceLeadingZeros(u8 *, s32, s32, s32);
 
 /**
- * @brief Call getPadReadButtons with a1=0, pass result to applyButtonRemapTranslation.
+ * @brief Call GetPressedButtons with a1=0, pass result to applyButtonRemapTranslation.
  *
- * @param a0 First argument passed through to getPadReadButtons.
+ * @param a0 First argument passed through to GetPressedButtons.
  */
 void func_800CFF2C(s32 a0) {
-    applyButtonRemapTranslation(getPadReadButtons(a0, 0));
+    applyButtonRemapTranslation(GetPressedButtons(a0, 0));
 }
 
 /**
- * @brief Call getPadReadRepeat with a1=0, pass result to applyButtonRemapTranslation.
+ * @brief Call GetAutoRepeatedButtons with a1=0, pass result to applyButtonRemapTranslation.
  *
- * @param a0 First argument passed through to getPadReadRepeat.
+ * @param a0 First argument passed through to GetAutoRepeatedButtons.
  */
 void func_800CFF54(s32 a0) {
-    applyButtonRemapTranslation(getPadReadRepeat(a0, 0));
+    applyButtonRemapTranslation(GetAutoRepeatedButtons(a0, 0));
 }
 
 /**
- * @brief Call getPadReadPressed with a1=0, pass result to applyButtonRemapTranslation.
+ * @brief Call GetNewlyPressedButtons with a1=0, pass result to applyButtonRemapTranslation.
  *
- * @param a0 First argument passed through to getPadReadPressed.
+ * @param a0 First argument passed through to GetNewlyPressedButtons.
  */
 void func_800CFF7C(s32 a0) {
-    applyButtonRemapTranslation(getPadReadPressed(a0, 0));
+    applyButtonRemapTranslation(GetNewlyPressedButtons(a0, 0));
 }
 
 /**
- * @brief Call func_80027DB4 with a2 = 0.
+ * @brief Call GetAnalogStickAxis with a2 = 0.
  *
  * @param a0 First argument passed through.
  * @param a1 Second argument passed through.
  */
 void func_800CFFA4(s32 a0, s32 a1) {
-    func_80027DB4(a0, a1, 0);
+    GetAnalogStickAxis(a0, a1, 0);
 }
 
 INCLUDE_ASM("asm/ovl/battle/nonmatchings/bc_object17", func_800CFFC4);

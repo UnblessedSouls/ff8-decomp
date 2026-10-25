@@ -235,11 +235,11 @@ extern s32              D_800C9ED4;   /**< Pad 1's raw frame parameter, packed i
 extern s32              D_800D2470;   /**< Repeat delay accumulator. */
 extern s32              D_800D2474;   /**< Repeat step counter. */
 
-/* getPadReadButtons returns u16 in gamepad.c, but every caller uses the result as
+/* GetPressedButtons returns u16 in gamepad.c, but every caller uses the result as
    s32 with no widening mask; thread.h documents that those callers keep their own
    declaration. applyButtonRemapTranslation is u16 (u16) in input/button_remap.h; this caller
    needs the s32 view, which the u16 prototype would mask. */
-extern s32              getPadReadButtons(s32 slot, s32 sub);
+extern s32              GetPressedButtons(s32 slot, s32 sub);
 // TODO: Drop this and include the prototype from the owner.
 extern s32 applyButtonRemapTranslation(s32 arg);
 extern s16              D_800C9772;   /**< Receives the low half of the camera-follow
@@ -374,8 +374,8 @@ static void func_800A0388(void) {
 
     D_800C4D04 = D_800C4D04 == 0;
     RecordGamePadInput();
-    D_800C9ED0 = getPadReadButtons(0, 0);
-    D_800C9ED4 = getPadReadButtons(1, 0);
+    D_800C9ED0 = GetPressedButtons(0, 0);
+    D_800C9ED4 = GetPressedButtons(1, 0);
     D_800D2278[D_800C4D04] = applyButtonRemapTranslation(D_800C9ED0) | (D_800C9ED4 << 16);
 
     D_800D2240[0] = D_800C96D8[0];
@@ -387,14 +387,14 @@ static void func_800A0388(void) {
     D_800D2240[6] = D_800C96D8[6];
     D_800D2240[7] = D_800C96D8[7];
 
-    D_800C96D8[0] = func_80027DB4(0, PAD_AXIS_X, 0);
-    D_800C96D8[1] = func_80027DB4(0, PAD_AXIS_Y, 0);
-    D_800C96D8[2] = func_80027DB4(0, PAD_AXIS_X2, 0);
-    D_800C96D8[3] = func_80027DB4(0, PAD_AXIS_Y2, 0);
-    D_800C96D8[4] = func_80027DB4(1, PAD_AXIS_X, 0);
-    D_800C96D8[5] = func_80027DB4(1, PAD_AXIS_Y, 0);
-    D_800C96D8[6] = func_80027DB4(1, PAD_AXIS_X2, 0);
-    D_800C96D8[7] = func_80027DB4(1, PAD_AXIS_Y2, 0);
+    D_800C96D8[0] = GetAnalogStickAxis(0, PAD_AXIS_X, 0);
+    D_800C96D8[1] = GetAnalogStickAxis(0, PAD_AXIS_Y, 0);
+    D_800C96D8[2] = GetAnalogStickAxis(0, PAD_AXIS_X2, 0);
+    D_800C96D8[3] = GetAnalogStickAxis(0, PAD_AXIS_Y2, 0);
+    D_800C96D8[4] = GetAnalogStickAxis(1, PAD_AXIS_X, 0);
+    D_800C96D8[5] = GetAnalogStickAxis(1, PAD_AXIS_Y, 0);
+    D_800C96D8[6] = GetAnalogStickAxis(1, PAD_AXIS_X2, 0);
+    D_800C96D8[7] = GetAnalogStickAxis(1, PAD_AXIS_Y2, 0);
 
     idx = D_800C4D04;
 
