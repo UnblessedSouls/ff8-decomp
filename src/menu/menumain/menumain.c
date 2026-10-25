@@ -406,7 +406,7 @@ void func_801F0224(void) {
     base = (s32)D_801FA280;
     *(s32 *)(base + 0x98) = (s32)0x801B2000;
     *(s32 *)(base + 0x138) = (s32)0x801B8800;
-    setPadMotors(0, 0, 0);
+    SetVibrationIntensity(0, 0, 0);
 }
 
 /* ======================================================================== */
@@ -2460,17 +2460,17 @@ void func_801F7954(void) {
     if (g_gameState.config.flags & CONFIG_VIBRATION) {
         a1 = 0xFF;
     }
-    setPadVibration(0, a1);
+    SetVibrationEnabled(0, a1);
 }
 
 /**
  * @brief Push the analog-volume and controller-mode config to the sound layer.
  *
- * Sends (analogVolume + 5) * 12 as the volume argument of setPadDeadZone,
- * then tells setPadAnalogFlag whether the analog flag is active — only
+ * Sends (analogVolume + 5) * 12 as the volume argument of SetStickDeadZone,
+ * then tells SetSwapAnalogSticks whether the analog flag is active — only
  * honored when the controller is in customize mode (CONFIG_CONTROLLER).
  *
- * @note setPadDeadZone/setPadAnalogFlag are main-executable sound-layer
+ * @note SetStickDeadZone/SetSwapAnalogSticks are main-executable sound-layer
  *       routines that are not decompiled yet.
  */
 void func_801F798C(void) {
@@ -2478,13 +2478,13 @@ void func_801F798C(void) {
 
     v = g_gameState.config.analogVolume;
     v += 5;
-    setPadDeadZone(0, v * 12);
+    SetStickDeadZone(0, v * 12);
     v = g_gameState.config.flags & CONFIG_ANALOG;
     v = v != 0;
     if (!(g_gameState.config.flags & CONFIG_CONTROLLER)) {
         v = 0;
     }
-    setPadAnalogFlag(0, v);
+    SetSwapAnalogSticks(0, v);
 }
 
 /** @brief Test sealed-ability bits (@c GameConfig.sealedAbilities & @p a0). */
@@ -2494,7 +2494,7 @@ s32 func_801F79F8(s32 a0) {
 
 /** @brief Copy pad port 0's vibration setting back into the Vibration option. */
 void func_801F7A08(void) {
-    if (getPadVibration(0) == 0xFF) {
+    if (IsVibrationEnabled(0) == 0xFF) {
         g_gameState.config.flags |= CONFIG_VIBRATION;
     } else {
         g_gameState.config.flags &= ~CONFIG_VIBRATION;

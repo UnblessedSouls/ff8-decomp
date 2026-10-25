@@ -78,7 +78,7 @@ void VsyncHandler(void) {
         break;
     }
 
-    if (getAnimGlobalState() != 0) {
+    if (IsPlayTimePaused() != 0) {
         D_8005F11E = 1;
         return;
     }
@@ -584,7 +584,7 @@ void ff8main(void) {
         }
         while (g_fieldEntity.mode != 4);
         sndStopAll();
-        setAnimGlobalState(0);
+        SetPlayTimePaused(0);
         WaitForGamePadDetection();
         ResetGraph(3);
     }

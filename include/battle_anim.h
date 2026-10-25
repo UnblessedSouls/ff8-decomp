@@ -52,8 +52,8 @@ typedef struct {
     /* 0x1DC */ s16 mouseBoundsRight;
     /* 0x1DE */ s16 mouseBoundsBottom;
     /* 0x1E0 */ U16Split repeatDelays;       /**< Pad auto-repeat timing (autoRepeatPadChannel): restart delay in @c b.lo, repeat interval in @c b.hi. */
-    /* 0x1E2 */ u8 pad1E2; /**< Unknown. */
-    /* 0x1E3 */ u8 animFlag; /**< Also addressed directly as @c g_animFlag. */
+    /* 0x1E2 */ u8 buttonsEnabled; /**< When 0, every gamepad reports no buttons held; the analog sticks still read. */
+    /* 0x1E3 */ u8 allowSecondGamePadInput; /**< When set, gamepad 1 reads gamepad 2's input whenever gamepad 1 has no buttons held and both sticks centred. */
     /* 0x1E4 */ u8 pad1E4[0x3C]; /**< Unknown. */
     /* 0x220 */ DialogSystem dialogs;               /**< Message windows; also addressed directly as @c g_dialogs. */
     /* 0x440 */ u8 pad440[0x200];            /**< Unknown. */
@@ -69,7 +69,7 @@ typedef struct {
     /* 0x984 */ SeedRankNotification seedRankNotification; /**< The SeeD rank notification. */
     /* 0x9A2 */ Gauge gauges[GAUGE_COUNT]; /**< The two HUD gauges. */
     /* 0x9C2 */ s16 field9C2;               /**< Set to 0x4611 during GPU init. */
-    /* 0x9C4 */ s16 cdStreamCounter;         /**< CD stream counter. */
+    /* 0x9C4 */ u16 playTimePaused; /**< Nonzero while a pause screen is up. The play-time and countdown clocks do not advance while it is set. */
     /* 0x9C6 */ u8 pad9C6[2];                /**< Unknown. */
     /* 0x9C8 */ s32 field9C8;                /**< Cleared during GPU init. */
     /* 0x9CC */ s32 field9CC;                /**< Cleared during GPU init. */

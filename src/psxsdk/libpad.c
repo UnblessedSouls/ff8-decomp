@@ -8,11 +8,11 @@ INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_800398A8);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_80039910);
 
-INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_80039AA0);
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", _padChkVsync);
 
-INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadStartCom);
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", _padStartCom);
 
-INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadStopCom);
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", _padStopCom);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_80039BC4);
 
@@ -38,9 +38,9 @@ INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003A7C4);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadChkVsync);
 
-INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003AB84);
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadStartCom);
 
-INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", func_8003ABA4);
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadStopCom);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libpad", PadChkMtap);
 

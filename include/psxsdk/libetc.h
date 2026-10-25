@@ -29,6 +29,9 @@
 #define PADstart   PADh
 #define PADselect  PADk
 
+#define MOUSEleft  (1<<3)
+#define MOUSEright (1<<2)
+
 /* --- Scratch pad (0x1F800000 - 0x1F800400) --- */
 #define getScratchAddr(offset)  ((u32 *)(0x1F800000 + (offset) * 4))
 

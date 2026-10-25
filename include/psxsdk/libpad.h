@@ -30,7 +30,4 @@ int PadSetActAlign(int, unsigned char *);
 int PadSetMainMode(int socket, int offs, int lock);
 void PadSetAct(int, unsigned char *, int);
 
-void func_8003AB84(void);
-void func_8003ABA4(void);
-
 #endif

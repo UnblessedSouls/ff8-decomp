@@ -194,7 +194,7 @@ void func_800983B8(void) {
 
     engine->repeatDelays.b.lo = 16;
     engine->repeatDelays.b.hi = 5;
-    engine->animFlag = 0;
+    engine->allowSecondGamePadInput = 0;
 
     mouseBounds.x = 0;
     mouseBounds.y = 0;
@@ -205,7 +205,7 @@ void func_800983B8(void) {
     port = engine->gamePads;
     i = 0;
     do {
-        initPadInput(i);
+        ResetGamePadInput(i);
         port->actuatorSetupPending = 1;
         port->autoRepeatButtonMasks[0] = 0xFFF;
         port->autoRepeatButtonMasks[1] = 0x5000;
