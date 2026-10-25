@@ -9,7 +9,7 @@ typedef struct {
     u8 gamePadInputIdentifier; // high nibble is gamepad type, low is number of byte pairs (16 bit) in input
     u16 currentlyPressedButtons; // buttons currently being pressed down in the frame (1 = pressed)
     u8 analog[4]; // rightX, rightY, leftX, leftY
-    u16 autoRepeatedButtons[4]; // used for repeating held down inputs. e.g. useful for scrolling lists by holding up/down
+    u16 autoRepeatedButtons[4]; // repeats held buttons, e.g. for scrolling a list by holding up/down
     u16 newlyPressedButtons;
     u16 newlyReleasedButtons;
 } GamePadInputFrame; /* 0x14 */
@@ -17,7 +17,7 @@ typedef struct {
 typedef struct {
     u8 gamePadTransmitBuf[6];
     u8 vibrationIntensity[2]; // one for each motor in the gamepad
-    u8 vibrationIntensityShift[2]; // small motor only goes 0-1 and large 0-255, this scales the vibrationIntensity[] level (0-255) so it fits each motor accurately
+    u8 vibrationIntensityShift[2]; // scales vibrationIntensity to each motor's range: 0-1 small, 0-255 large
     u8 actuatorDataChanged;
     u8 actuatorCount; // number of vibration motors (sdk calls it actuator)
     s8 autoRepeatCountdowns[4];
@@ -37,8 +37,8 @@ void RecordGamePadInput(void);
 typedef enum {
     PAD_AXIS_X2 = 0,
     PAD_AXIS_Y2 = 1,
-    PAD_AXIS_X  = 2,
-    PAD_AXIS_Y  = 3
+    PAD_AXIS_X = 2,
+    PAD_AXIS_Y = 3
 } PadAxis;
 
 s32 GetAnalogStickAxis(s32 idx, s32 axis, s32 offset);

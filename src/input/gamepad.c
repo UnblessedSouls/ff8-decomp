@@ -37,7 +37,8 @@ typedef struct {
     } data;
 } GamePadReceiveData;
 
-static s32 UpdateAutoRepeatForGroup(EngineState *engine, GamePad *gamePad, u16 previousButtons, u16 currentButtons, s32 buttonGroup);
+static s32 UpdateAutoRepeatForGroup(
+    EngineState *engine, GamePad *gamePad, u16 previousButtons, u16 currentButtons, s32 buttonGroup);
 static void SetupActuators(EngineState *engine, GamePad *gamePad, s32 port);
 static void UpdateGamePad(EngineState *engine, GamePad *gamePad, s32 port);
 static void UpdateGamePads(EngineState *engine);
@@ -51,7 +52,8 @@ static void EnableGamePadInput(void);
 static void DisableGamePadInput(void);
 static void SetAllowSecondGamePadInput(s32 value);
 
-static s32 UpdateAutoRepeatForGroup(EngineState *engine, GamePad *gamePad, u16 previousButtons, u16 currentButtons, s32 buttonGroup) {
+static s32 UpdateAutoRepeatForGroup(
+    EngineState *engine, GamePad *gamePad, u16 previousButtons, u16 currentButtons, s32 buttonGroup) {
     s32 counter;
     s32 interval;
     u16 restartDelay;
@@ -142,7 +144,6 @@ static void SetupActuators(EngineState *engine, GamePad *gamePad, s32 port) {
         gamePad->vibrationIntensityShift[1] = leftIntensityBits;
     }
 }
-
 
 /**
  * @brief Update the state of a given GamePad using a given port
@@ -370,8 +371,8 @@ void RecordGamePadInput(void) {
                     mouseY = receiveBuf->data.mouseMovement[1];
                     mouseX += engine->mousePositions[i][0];
                     mouseY += engine->mousePositions[i][1];
-                    mouseX = (mouseX < engine->mouseBoundsLeft) ? engine->mouseBoundsLeft : (mouseX > engine->mouseBoundsRight) ? engine->mouseBoundsRight : mouseX;
-                    mouseY = (mouseY < engine->mouseBoundsTop) ? engine->mouseBoundsTop : (mouseY > engine->mouseBoundsBottom) ? engine->mouseBoundsBottom : mouseY;
+                    mouseX = CLAMP(mouseX, engine->mouseBoundsLeft, engine->mouseBoundsRight);
+                    mouseY = CLAMP(mouseY, engine->mouseBoundsTop, engine->mouseBoundsBottom);
                     currentButtons &= MOUSEleft | MOUSEright;
                     engine->mousePositions[i][0] = mouseX;
                     engine->mousePositions[i][1] = mouseY;
@@ -406,7 +407,8 @@ static inline GamePadInputFrame *GetHistoricalFrame(s32 idx, s32 offset) {
     GamePad *gamePad;
     idx &= 1; // & 1 is same as % 2 (gamePads size is 2)
     gamePad = &g_engine.gamePads[g_engine.gamePads[idx].inputSourceIndex];
-    return &gamePad->frames[(gamePad->frameCounter - offset) & 7]; // & 7 is basically modulo 8. (The input ring buffer is size 8)
+    // & 7 is basically modulo 8. (The input ring buffer is size 8)
+    return &gamePad->frames[(gamePad->frameCounter - offset) & 7];
 }
 
 u16 GetPressedButtons(s32 idx, s32 offset) {
@@ -415,7 +417,8 @@ u16 GetPressedButtons(s32 idx, s32 offset) {
 
 u16 GetAutoRepeatedButtons(s32 idx, s32 offset) {
     GamePadInputFrame *frame = GetHistoricalFrame(idx, offset);
-    return frame->autoRepeatedButtons[0] | frame->autoRepeatedButtons[1] | frame->autoRepeatedButtons[2] | frame->autoRepeatedButtons[3];
+    return frame->autoRepeatedButtons[0] | frame->autoRepeatedButtons[1] | frame->autoRepeatedButtons[2] |
+        frame->autoRepeatedButtons[3];
 }
 
 u16 GetNewlyPressedButtons(s32 idx, s32 offset) {
@@ -425,7 +428,6 @@ u16 GetNewlyPressedButtons(s32 idx, s32 offset) {
 static u16 GetNewlyReleasedButtons(s32 idx, s32 offset) {
     return GetHistoricalFrame(idx, offset)->newlyReleasedButtons;
 }
-
 
 /**
  * @brief Compute angle from (x, y)
@@ -449,7 +451,6 @@ inline s32 CalculateVectorAngle(s32 x, s32 y) { // Original devs possibly forgot
     }
     return angle;
 }
-
 
 /**
  * @brief Map an angle to d-pad direction
@@ -476,7 +477,6 @@ s32 GetStickDeadZoneSquared(s32 idx) {
     return (g_engine.gamePads[slot].analogStickConfig & ~PAD_PORT_SWAP_ANALOG_STICKS) << 8;
 }
 
-
 /**
  * @brief Set the analog stick dead zone of a gamepad
  *
@@ -498,7 +498,6 @@ void SetStickDeadZone(s32 idx, s32 deadZoneLevel) {
     linked->analogStickConfig = (linked->analogStickConfig & PAD_PORT_SWAP_ANALOG_STICKS) | sq;
 }
 
-
 /**
  * @brief Turn the left/right analog stick swap on or off for the given gamepad.
  * @param idx Gamepad index (only bit 0 used).
@@ -517,7 +516,6 @@ void SetSwapAnalogSticks(s32 idx, s32 enabled) {
     }
 }
 
-
 s32 StickToDPadButton(s32 idx, s32 x, s32 y) {
     s32 deadZone;
     u16 dPadBits;
@@ -530,7 +528,6 @@ s32 StickToDPadButton(s32 idx, s32 x, s32 y) {
 
     return dPadBits;
 }
-
 
 s32 GetAnalogStickAxis(s32 idx, s32 axis, s32 offset) {
     GamePad *port;
@@ -559,7 +556,6 @@ s32 GetAnalogStickAxis(s32 idx, s32 axis, s32 offset) {
     return result;
 }
 
-
 /**
  * @brief Check if vibration is enabled for a gameapad
  * @param idx Gamepad index (masked to 0 or 1).
@@ -569,7 +565,6 @@ s32 IsVibrationEnabled(s32 idx) {
     GamePad *port = &g_engine.gamePads[idx & 1];
     return port->vibrationMask;
 }
-
 
 /**
  * @brief Turn a gamepad's vibration on or off.
@@ -584,7 +579,6 @@ void SetVibrationEnabled(s32 idx, s32 enabled) {
         port->vibrationMask = 0;
     }
 }
-
 
 /**
  * @brief Set a gamepad's vibration motor levels.
@@ -604,7 +598,6 @@ void SetVibrationIntensity(s32 idx, s32 largeMotor, s32 smallMotor) {
     port->actuatorDataChanged = 1;
 }
 
-
 /**
  * @brief Get one axis of a gamepad's mouse cursor position.
  * @param idx Gamepad index (masked to 0 or 1).
@@ -617,7 +610,6 @@ static s16 GetMousePosition(s32 idx, s32 axis) {
     return g_engine.mousePositions[idx][axis];
 }
 
-
 /**
  * @brief Set a gamepad's mouse cursor position.
  * @param idx Gamepad index (masked to 0 or 1).
@@ -629,7 +621,6 @@ void SetMousePosition(s32 idx, s16 x, s16 y) {
     g_engine.mousePositions[idx][0] = x;
     g_engine.mousePositions[idx][1] = y;
 }
-
 
 /**
  * @brief Read a mouse movement byte from a past read
@@ -660,7 +651,6 @@ static s32 GetMouseDeltaMovement(s32 idx, s32 axis, s32 frameOffset) {
     return result;
 }
 
-
 /**
  * @brief Check whether the first gamepad is connected, judged by whether its latest read succeeded.
  * @return 1 if it is, 0 otherwise.
@@ -668,7 +658,6 @@ static s32 GetMouseDeltaMovement(s32 idx, s32 axis, s32 frameOffset) {
 s32 IsFirstGamePadConnected(void) {
     return GetGamePadType(0, 0) >= 0;
 }
-
 
 /**
  * @brief Get the gamepad type of a recorded read on a gamepad.
@@ -703,7 +692,6 @@ static s32 GetGamePadType(s32 idx, s32 frameOffset) {
     return frame->gamePadInputIdentifier >> 4;
 }
 
-
 /**
  * @brief Set which buttons one auto-repeat group repeats, on both gamepads.
  * @param unused Unused parameter.
@@ -716,7 +704,6 @@ void SetAutoRepeatButtonMask(s32 unused, s32 buttonGroup, s32 mask) {
     gamePad++;
     gamePad->autoRepeatButtonMasks[buttonGroup] = mask;
 }
-
 
 /**
  * @brief Reset the input state of a gamepad
@@ -757,7 +744,6 @@ static void ResetInputHistory(s32 idx, u16 buttons) {
     }
 }
 
-
 /**
  * @brief Reset a gamepad's auto-repeat countdowns and input history.
  *
@@ -775,7 +761,6 @@ void ResetGamePadInput(s32 idx) {
     ResetInputHistory(idx, 0);
 }
 
-
 static void EnableGamePadInput(void) {
     s32 i;
 
@@ -792,7 +777,6 @@ static void EnableGamePadInput(void) {
     }
     VSync(2);
 }
-
 
 static void DisableGamePadInput(void) {
     s32 i;
@@ -824,7 +808,6 @@ s32 SetPlayTimePaused(s32 value) {
 static void SetAllowSecondGamePadInput(s32 value) {
     g_engine.allowSecondGamePadInput = value;
 }
-
 
 /**
  * @brief Start the gamepad system.
