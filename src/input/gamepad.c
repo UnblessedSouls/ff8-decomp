@@ -257,12 +257,8 @@ void WaitForGamePadDetection(void) {
     }
 }
 
-
 /**
  * @brief Set the area the mouse cursor is kept inside.
- *
- * Copies x, y from @p rect to mouseBoundsLeft/mouseBoundsTop, and computes
- * x+w-1, y+h-1 for mouseBoundsRight/mouseBoundsBottom.
  *
  * @param rect The area, in screen pixels.
  */
@@ -273,14 +269,9 @@ void SetMouseBounds(RECT *rect) {
     g_engine.mouseBoundsBottom = rect->y + rect->h - 1;
 }
 
-
-/**
- * @brief Read actuatorCount from a pad port.
- * @param idx Port index.
- */
-s32 getPadField0B(s32 idx) {
-    GamePad *port = &g_engine.gamePads[idx];
-    return port->actuatorCount;
+s32 GetActuatorCountForGamePad(s32 idx) {
+    GamePad *gamePad = &g_engine.gamePads[idx];
+    return gamePad->actuatorCount;
 }
 
 

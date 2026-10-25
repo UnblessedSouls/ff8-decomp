@@ -61,6 +61,7 @@ s32 getPadVibration(s32 idx);
 void setPadDeadZone(s32 a0, s32 a1);
 void setPadAnalogFlag(s32 a0, s32 a1);
 void RequestActuatorSetup(s32 idx);
+s32 GetActuatorCountForGamePad(s32 idx);
 s32 getAnimGlobalState(void);
 s32 setAnimGlobalState(s32 value);
 void setPadMotors(s32 idx, s32 motor1, s32 motor0);
