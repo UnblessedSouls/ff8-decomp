@@ -751,7 +751,7 @@ void readPads(void)
  * Clears the per-(port, side) bookkeeping tables — previous edge flags
  * (@c D_801D4AF8), edge countdown timers (@c D_801D4B08), and the three
  * @c D_801D4B20 / @c D_801D4B28 / @c D_801D4B30 word tables — for both
- * ports, then seeds @c setPadRepeatMask with the fixed per-side
+ * ports, then seeds @c SetAutoRepeatButtonMask with the fixed per-side
  * parameters (one set per side 0..3) for each port.
  */
 void func_800A2D34(void)
@@ -772,14 +772,14 @@ void func_800A2D34(void)
         D_801D4B30[i] = 0;
     }
 
-    setPadRepeatMask(0, 0, 0xFFF);
-    setPadRepeatMask(0, 1, 0x5000);
-    setPadRepeatMask(0, 2, 0xA000);
-    setPadRepeatMask(0, 3, 0x900);
-    setPadRepeatMask(1, 0, 0xFFF);
-    setPadRepeatMask(1, 1, 0x5000);
-    setPadRepeatMask(1, 2, 0xA000);
-    setPadRepeatMask(1, 3, 0x900);
+    SetAutoRepeatButtonMask(0, 0, 0xFFF);
+    SetAutoRepeatButtonMask(0, 1, 0x5000);
+    SetAutoRepeatButtonMask(0, 2, 0xA000);
+    SetAutoRepeatButtonMask(0, 3, 0x900);
+    SetAutoRepeatButtonMask(1, 0, 0xFFF);
+    SetAutoRepeatButtonMask(1, 1, 0x5000);
+    SetAutoRepeatButtonMask(1, 2, 0xA000);
+    SetAutoRepeatButtonMask(1, 3, 0x900);
 }
 
 /**

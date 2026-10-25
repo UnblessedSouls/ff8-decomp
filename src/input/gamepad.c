@@ -672,7 +672,7 @@ s32 IsFirstGamePadConnected(void) {
 
 
 /**
- * @brief Get the gamepad type of a past read on the gamepad linked to gamepad @p idx.
+ * @brief Get the gamepad type of a recorded read on a gamepad.
  * @param idx Gamepad index (only bit 0 used).
  * @param frameOffset How many reads back to look.
  * @return The ID byte's high nibble, the gamepad type the GAMEPAD_TYPE_* values name, or -1 if that read failed.
@@ -706,16 +706,16 @@ static s32 GetGamePadType(s32 idx, s32 frameOffset) {
 
 
 /**
- * @brief Set the button mask of one auto-repeat channel on both pad ports.
+ * @brief Set which buttons one auto-repeat group repeats, on both gamepads.
  * @param unused Unused parameter.
- * @param channel Auto-repeat channel (0-3).
- * @param mask Buttons the channel repeats.
+ * @param buttonGroup Auto-repeat group (0-3).
+ * @param mask Buttons the group repeats.
  */
-void setPadRepeatMask(s32 unused, s32 channel, s32 mask) {
-    int new_var;
-    new_var = 1;
-    g_engine.gamePads[0].autoRepeatButtonMasks[channel] = mask;
-    g_engine.gamePads[new_var].autoRepeatButtonMasks[channel] = mask;
+void SetAutoRepeatButtonMask(s32 unused, s32 buttonGroup, s32 mask) {
+    GamePad *gamePad = g_engine.gamePads;
+    gamePad->autoRepeatButtonMasks[buttonGroup] = mask;
+    gamePad++;
+    gamePad->autoRepeatButtonMasks[buttonGroup] = mask;
 }
 
 
