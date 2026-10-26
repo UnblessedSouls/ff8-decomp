@@ -14,6 +14,8 @@ typedef struct {
     /** 0x0C */ u8 unk0C[12];
 } WorldToFieldEntrance;
 
+extern WorldToFieldEntrance g_worldToFieldEntrances[72];
+
 // The 72 entrances of data/eng/wm2field.tbl.
 #define WORLD_TO_FIELD_ENTRANCES ((WorldToFieldEntrance *)0x80097940)
 
