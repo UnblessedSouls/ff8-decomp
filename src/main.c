@@ -160,7 +160,7 @@ void RestoreSnapshot(void) {
     entity->position_x = g_gameState.cameraSnapshot.positionsX[0];
     entity->position_y = g_gameState.cameraSnapshot.positionsY[0];
     entity->spawnTriIdx = g_gameState.cameraSnapshot.triIdxs[0];
-    entity->anim_state = g_gameState.cameraSnapshot.animStates[0];
+    entity->facingDirection = g_gameState.cameraSnapshot.animStates[0];
 
     D_8005F151 = g_gameState.cameraSnapshot.fade1;
     D_8005F150 = g_gameState.cameraSnapshot.fade0;
@@ -401,7 +401,7 @@ void ff8main(void) {
                     g_fieldEntity.position_y = entry->position_y;
                     g_fieldEntity.spawnTriIdx = entry->spawnTriIdx;
                     g_curFieldId = fieldId;
-                    g_fieldEntity.anim_state = entry->anim_state;
+                    g_fieldEntity.facingDirection = entry->facingDirection;
                     g_vsyncRate = 1;
                     sndCmd21(-1, 0);
                     break;

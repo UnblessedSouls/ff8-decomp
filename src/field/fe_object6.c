@@ -1347,7 +1347,7 @@ s32 opHandler_WORLDMAPJUMP(ScriptContext *context) {
             context->stackPtr -= 3;
         } else {
             g_fieldEntity.mode = 7;
-            g_fieldEntity.anim_state = POP(context);
+            g_fieldEntity.facingDirection = POP(context);
             g_fieldEntity.spawnTriIdx = POP(context);
             g_fieldEntity.counter = POP(context);
             func_800B4F40();
@@ -1428,7 +1428,7 @@ s32 opHandler_MAPJUMP(ScriptContext *context, s32 a1) {
     if ((context->activeMask >> context->scriptSlot) & 1) {
         g_fieldEntity.mode = 1;
         g_fieldEntity.spawnTriIdx = a1;
-        g_fieldEntity.anim_state = POP(context);
+        g_fieldEntity.facingDirection = POP(context);
         g_fieldEntity.position_y = POP(context);
         g_fieldEntity.position_x = POP(context);
         g_fieldEntity.counter = POP(context);
@@ -1448,7 +1448,7 @@ s32 opHandler_MAPJUMP3(ScriptContext *context, s32 a1) {
     if ((context->activeMask >> context->scriptSlot) & 1) {
         g_fieldEntity.mode = 1;
         g_fieldEntity.spawnTriIdx = a1;
-        g_fieldEntity.anim_state = POP(context);
+        g_fieldEntity.facingDirection = POP(context);
         g_fieldEntity.unk008 = POP(context);
         g_fieldEntity.position_y = POP(context);
         g_fieldEntity.position_x = POP(context);
@@ -1470,7 +1470,7 @@ s32 opHandler_DISCJUMP(ScriptContext *context, s32 a1) {
         g_fieldEntity.mode = 6;
         g_fieldEntity.unk1A0 = 1;
         g_fieldEntity.spawnTriIdx = a1;
-        g_fieldEntity.anim_state = POP(context);
+        g_fieldEntity.facingDirection = POP(context);
         g_fieldEntity.unk008 = POP(context);
         g_fieldEntity.position_y = POP(context);
         g_fieldEntity.position_x = POP(context);
@@ -1489,7 +1489,7 @@ s32 opHandler_DISCJUMP(ScriptContext *context, s32 a1) {
 s32 opHandler_MAPJUMPO(ScriptContext *context) {
     if ((context->activeMask >> context->scriptSlot) & 1) {
         g_fieldEntity.mode = 1;
-        g_fieldEntity.anim_state = 0;
+        g_fieldEntity.facingDirection = 0;
         g_fieldEntity.spawnTriIdx = POP(context);
         g_fieldEntity.position_x = 0x7FFF;
         g_fieldEntity.position_y = 0x7FFF;

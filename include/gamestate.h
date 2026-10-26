@@ -12,7 +12,7 @@ typedef struct {
     union {
         struct {
             /* 0x02 */ s8 entranceIndex; // index into WORLD_TO_FIELD_ENTRANCES
-            /* 0x03 */ s8 unk03;
+            /* 0x03 */ s8 facingDirection;
         } entrance;
         struct {
             /* 0x02 */ u8 sceneLow; // these two are 16 bit representing the battle scene id

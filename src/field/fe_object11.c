@@ -289,7 +289,7 @@ s32 *func_800BFBBC(u8 *entity, Eline *eline, u16 *a2, s32 mode) {
                 if (g_gameState.battleParty[i] == e->field_0x255) {
                     e->posX = g_fieldEntity.position_x << 12;
                     e->posY = g_fieldEntity.position_y << 12;
-                    e->field_0x241 = g_fieldEntity.anim_state;
+                    e->field_0x241 = g_fieldEntity.facingDirection;
                     rot = g_fieldEntity.spawnTriIdx;
                     e->context.flags |= 4;
                     e->triIdx = rot;

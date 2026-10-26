@@ -116,7 +116,7 @@ typedef struct {
     /* 0x00C */ s16 spawnTriIdx;    /**< Spawn navmesh triangle — assigned straight to @c Actor::triIdx
                                          by both @c func_8009AEC0 and @c func_800BE264.
                                          @c SPAWN_UNSET means "keep the entity where it is". */
-    /* 0x00E */ u16 anim_state;     /**< Spawn animation id, copied to @c Actor::field_0x241. */
+    /* 0x00E */ u16 facingDirection;
     /* 0x010 */ u16 unk010;         /**< Set to 2 by @c func_8009895C on load modes other than 0/1/2. */
     /* 0x012 */ u8 entityIndex[3];  /**< Per-active-slot field-entity index (mirror of g_fieldVars->memberSlot[]). */
     /* 0x015 */ u8 unk015;          /**< Cleared by @c opHandler_UCON along with the trigger flag. */

@@ -313,7 +313,7 @@ void func_8009D3F4(void) {
     D_80082C8C.mode = 5;
     D_80082C8C.cmd = D_800C4D38;
     D_80082C8C.param.entrance.entranceIndex = -1;
-    D_80082C8C.param.entrance.unk03 = -1;
+    D_80082C8C.param.entrance.facingDirection = -1;
     func_800B3FD4(D_800D226C, 5);
 }
 

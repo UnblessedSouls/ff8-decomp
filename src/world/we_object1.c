@@ -761,7 +761,7 @@ void func_8009C294(s32 cmd) {
     }
     D_80082C8C.mode = 1;
     D_80082C8C.param.entrance.entranceIndex = cmd;
-    D_80082C8C.param.entrance.unk03 = -1;
+    D_80082C8C.param.entrance.facingDirection = -1;
     D_80082C8C.cmd = D_800C4D38;
     func_800B3FD4(D_800D226C, 1);
     D_800D226C->bytes[1] = 0;
