@@ -71,7 +71,7 @@ void func_80011870(void);
 void RestoreSnapshot(void);
 void loadFieldDataA(void);
 void loadFieldDataB(void);
-void loadSecondaryData(void);
+void LoadWm2FieldTable(void);
 void initSoundEngine(void);
 void loadCdOverlay(void);
 void loadAndUploadTextures(void);

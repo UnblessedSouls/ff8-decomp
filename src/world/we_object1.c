@@ -1218,7 +1218,7 @@ loop:
         goto done;
     }
     id = p[ID_OFFSET];
-    cdRead(section->baseLba + id, CD_SECTOR_SIZE, (p != first) ? dest1 : dest0, 0);
+    cdRead(section->baseLba + id, CD_SECTOR_SIZE, (p == first) ? dest0 : dest1, NULL);
     while (func_800393C8()) {
         ;
     }

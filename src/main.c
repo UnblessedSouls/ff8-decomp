@@ -194,15 +194,9 @@ void loadFieldDataB(void) {
     func_8001F5C8();
 }
 
-/** @brief Loads a secondary data block from CD.
- *
- *  @note Purpose uncertain - possibly a secondary asset table used during
- *        initialization.
- */
-void loadSecondaryData(void) {
-    cdRead(D_80097410[1].sector, D_80097410[1].size, 0x80097940, 0);
-    while (func_800393C8() != 0)
-        ;
+void LoadWm2FieldTable(void) {
+    cdRead(D_80097410[1].sector, D_80097410[1].size, WORLD_TO_FIELD_ENTRANCES, NULL);
+    while (func_800393C8() != 0) {}
 }
 
 /** @brief Initializes the sound engine and loads its audio assets (sound bank
@@ -324,7 +318,7 @@ void ff8main(void) {
     loadCdOverlay();
     func_80098000();
     initFieldModule();
-    loadSecondaryData();
+    LoadWm2FieldTable();
     while (1) {
         func_80038868(D_80097400[1].sector, D_80097400[1].size, 0x80098000, 0);
         while (func_800393C8() != 0) {}
@@ -358,7 +352,7 @@ void ff8main(void) {
 
             func_80098FD4(1);
             loadFileTable();
-            loadSecondaryData();
+            LoadWm2FieldTable();
         }
         do {
             mode = g_vsyncRate - 1;
@@ -560,7 +554,7 @@ void ff8main(void) {
                 mode = g_fieldEntity.unk1A0;
                 if (mode == 1) {
                     loadFileTable();
-                    loadSecondaryData();
+                    LoadWm2FieldTable();
                     D_8005F14C = 0;
                     g_vsyncRate = mode;
                     g_curFieldId = g_fieldEntity.counter;
