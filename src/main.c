@@ -22,24 +22,11 @@
 #include "psxsdk/libetc.h"
 #include "main.h"
 #include "btl_transition.h"
+#include "wm2field.h"
 
 /** @brief Global field ids of the maps a new game and a game over go to. */
 #define FIELD_ID_START0 74 /**< start0, the first map of a new game. */
 #define FIELD_ID_GOVER 75 /**< gover, the game-over map. */
-
-/** @brief A world-map entrance: the field it leads to and where the party appears there. */
-typedef struct {
-    /* 0x00 */ u16 position_x;
-    /* 0x02 */ u16 position_y;
-    /* 0x04 */ u16 spawnTriIdx;  /**< Navmesh triangle, copied to @c SystemState::spawnTriIdx. */
-    /* 0x06 */ s16 fieldId;      /**< Global id of the destination field. */
-    /* 0x08 */ u8  anim_state;
-    /* 0x09 */ u8  pad09[0xF];
-} WorldEntrance; /* 0x18 */
-
-/** @brief The 72 entrances of data/eng/wm2field.tbl, loaded here at boot. */
-#define WORLD_ENTRANCES ((WorldEntrance *)0x80097940)
-
 
 /** @brief Turn the GPU's mask-bit setting off with one packet, and wait until the GPU is idle. */
 void flushGpuOt(void) {
@@ -323,7 +310,7 @@ void loadFileTable(void) {
  * without that call. */
 void ff8main(void) __asm__("main");
 void ff8main(void) {
-    WorldEntrance *entry;
+    WorldToFieldEntrance *entry;
     s16 i;
     s16 mode;
     s16 fieldId;
@@ -414,7 +401,7 @@ void ff8main(void) {
                 D_8005F14C = 2;
                 switch (D_80082C8C.mode) {
                 case 1:
-                    entry = &WORLD_ENTRANCES[D_80082C8C.unk02];
+                    entry = &WORLD_TO_FIELD_ENTRANCES[D_80082C8C.unk02];
                     fieldId = entry->fieldId;
                     g_fieldEntity.position_x = entry->position_x;
                     g_fieldEntity.position_y = entry->position_y;
