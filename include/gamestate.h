@@ -6,20 +6,22 @@
 #include "field.h"
 #include "psxsdk/libgpu.h"
 
-/**
- * @brief 4-byte scene-state block at D_80082C8C.
- *
- * Shared between the world overlay (struct view) and the main state machine.
- * Stores the current scene mode, dispatch code, and two marker bytes.
- */
 typedef struct {
-    /* 0x00 */ s8 mode;   /**< Scene mode / kind. */
-    /* 0x01 */ s8 cmd;    /**< Current dispatch code (copy of D_800C4D38). */
-    /* 0x02 */ s8 unk02;  /**< Marker byte - set to -1 on reset. */
-    /* 0x03 */ s8 unk03;  /**< Marker byte - set to -1 on reset. */
+    /* 0x00 */ s8 mode;
+    /* 0x01 */ s8 cmd;
+    union {
+        struct {
+            /* 0x02 */ s8 entranceIndex; // index into WORLD_TO_FIELD_ENTRANCES
+            /* 0x03 */ s8 unk03;
+        } entrance;
+        struct {
+            /* 0x02 */ u8 sceneLow; // these two are 16 bit representing the battle scene id
+            /* 0x03 */ u8 sceneHigh;
+        } battle;
+    } param;
 } SceneState;
 
-extern SceneState D_80082C8C;   /**< Scene-state block (mode/cmd/markers). */
+extern SceneState D_80082C8C;
 
 /* ======================================================================== */
 /* GF Save Data                                                             */

@@ -312,8 +312,8 @@ void func_8009D3F4(void) {
     func_8009D630();
     D_80082C8C.mode = 5;
     D_80082C8C.cmd = D_800C4D38;
-    D_80082C8C.unk02 = -1;
-    D_80082C8C.unk03 = -1;
+    D_80082C8C.param.entrance.entranceIndex = -1;
+    D_80082C8C.param.entrance.unk03 = -1;
     func_800B3FD4(D_800D226C, 5);
 }
 
@@ -338,8 +338,8 @@ void func_8009D44C(s32 marker) {
     D_800C8CEA = marker;
     func_8009D630();
     D_80082C8C.mode = 3;
-    D_80082C8C.unk02 = (s8)marker;
-    D_80082C8C.unk03 = (s8)((u32)marker >> 8);
+    D_80082C8C.param.battle.sceneLow = marker;
+    D_80082C8C.param.battle.sceneHigh = (u32)marker >> 8;
     D_80082C8C.cmd = D_800C4D38;
     func_800B3FD4(D_800D226C, 3);
     g_battleConfig.unk2 = 0;

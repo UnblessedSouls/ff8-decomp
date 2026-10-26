@@ -474,9 +474,9 @@ void func_8009895C(void) {
             g_fieldEntity.mode = 0;
             g_vsyncRate = 2;
             g_fieldEntity.field_0x120 = g_curFieldId;
-            D_80082C8C.unk02 = g_fieldEntity.counter;
+            D_80082C8C.param.entrance.entranceIndex = g_fieldEntity.counter;
             D_80082C8C.cmd = g_fieldEntity.spawnTriIdx;
-            D_80082C8C.unk03 = g_fieldEntity.anim_state;
+            D_80082C8C.param.entrance.unk03 = g_fieldEntity.anim_state;
             sndCmd21(-1, 0);
             break;
         }

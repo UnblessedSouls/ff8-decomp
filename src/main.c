@@ -395,7 +395,7 @@ void ff8main(void) {
                 D_8005F14C = 2;
                 switch (D_80082C8C.mode) {
                 case 1:
-                    entry = &WORLD_TO_FIELD_ENTRANCES[D_80082C8C.unk02];
+                    entry = &WORLD_TO_FIELD_ENTRANCES[D_80082C8C.param.entrance.entranceIndex];
                     fieldId = entry->fieldId;
                     g_fieldEntity.position_x = entry->position_x;
                     g_fieldEntity.position_y = entry->position_y;
@@ -424,7 +424,7 @@ void ff8main(void) {
                     g_battleConfig.battleSceneId = g_fieldEntity.counter;
                     mapAddr = D_8005F13C;
                 } else {
-                    g_battleConfig.battleSceneId = ((u8) D_80082C8C.unk02) | (((u8) D_80082C8C.unk03) << 8);
+                    g_battleConfig.battleSceneId = D_80082C8C.param.battle.sceneLow | (D_80082C8C.param.battle.sceneHigh << 8);
                     mapAddr = 0x801D0000;
                 }
                 func_80038030(mapAddr);
