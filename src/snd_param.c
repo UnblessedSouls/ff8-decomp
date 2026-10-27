@@ -14,7 +14,6 @@ typedef struct {
     /* 0x08 */ u16 unk08;
 } func_8001A1E8_data;
 
-extern s32 D_800772A4;
 extern SndVoice D_80074E68;
 extern void (*D_80052298[])(SndVoice *voice);
 

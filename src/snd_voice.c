@@ -6,6 +6,7 @@
 #include "snd_voice.h"
 
 void sndReleaseVoice(s32 a0);
+void func_80016C28(u32 *out, u32 maskSecond, u32 maskMain, u32 extra);
 
 void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale) {
     u16 *reg;
@@ -645,22 +646,140 @@ void func_80016344(u32 mask) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016478);
+void func_80016478(SoundMusicConfig *config, SoundSeqTrack *tracks) {
+    s32 level = config->unk50;
+
+    D_80074F10.unk0C = level;
+    level >>= 16;
+    level *= D_80074F10.unk00 >> 8;
+    level /= 127;
+    level <<= 8;
+    config->unk50 = level;
+}
 
 extern s32 D_80074F1C;
 /**
- * @brief Stores the current global tempo/timing value into a track structure.
+ * @brief Copies D_80074F1C into @p config's unk50.
  *
- * Copies D_80074F1C (a global timing or tick counter) into the track
- * structure field at offset 0x50.
- *
- * @param a0 Pointer to a sequence track structure.
+ * @param config Music config to update.
+ * @param tracks The config's track array (unused).
  */
-void sndStoreTrackTiming(u8 *a0) {
-    ((SoundSeqTrack *)a0)->timing = D_80074F1C;
+void sndStoreTrackTiming(SoundMusicConfig *config, SoundSeqTrack *tracks) {
+    config->unk50 = D_80074F1C;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_800164D8);
+void func_800164D8(void) {
+    SoundMusicConfig *config;
+    SoundMusicConfig *main;
+    SoundSeqTrack *track;
+    s32 keyOn;
+    u32 sfxBusy;
+    u32 secondActive;
+    u32 secondFree;
+    u32 active;
+    u32 free;
+    u32 mask;
+    s32 depth;
+
+    sfxBusy = D_80075028.unk00 | D_80075028.unk10 | D_800772A4;
+    keyOn = 0;
+    if ((g_sndSeqState->unk04 & g_sndSeqState->unk10) || (D_80073CA8 != NULL && (D_80073CA8->unk04 & D_80073CA8->unk10))) {
+        func_80016344(sfxBusy);
+    }
+    if (D_80073CA8 != NULL) {
+        if (D_80077288[1] & 0x100) {
+            func_80016478(D_80073CA8, D_80073C34);
+        }
+        config = D_80073CA8;
+        g_sndSeqState = config;
+        secondActive = (config->unk04 & config->unk14) & ~(config->unk0C & sfxBusy);
+        secondFree = (secondActive & config->unk0C) & ~sfxBusy;
+        if (secondActive & config->unk08) {
+            func_80015FE0(D_80073C34, secondActive & config->unk08, secondFree, &keyOn);
+            g_sndSeqState->unk10 &= ~g_sndSeqState->unk08;
+            secondActive &= ~g_sndSeqState->unk08;
+        }
+        main = &D_80073D70;
+        g_sndSeqState = main;
+        active = (main->unk04 & main->unk14) & ~(main->unk0C & (secondFree | sfxBusy));
+        free = (active & main->unk0C) & ~(secondFree | sfxBusy);
+        if (active & main->unk08) {
+            func_80015FE0(D_80070D60, active & main->unk08, free, &keyOn);
+            g_sndSeqState->unk10 &= ~g_sndSeqState->unk08;
+            active &= ~g_sndSeqState->unk08;
+        }
+        if (secondActive != 0) {
+            g_sndSeqState = D_80073CA8;
+            secondFree &= ~free;
+            func_80015FE0(D_80073C34, secondActive, secondFree, &keyOn);
+            g_sndSeqState->unk10 = 0;
+            g_sndSeqState = main;
+        }
+        if (active != 0) {
+            func_80015FE0(D_80070D60, active, free, &keyOn);
+            g_sndSeqState->unk10 = 0;
+        }
+        if (D_80077288[1] & 0x100) {
+            sndStoreTrackTiming(D_80073CA8, D_80073C34);
+        }
+    } else {
+        config = g_sndSeqState;
+        active = (config->unk04 & config->unk14) & ~(config->unk0C & sfxBusy);
+        mask = (active & config->unk0C) & ~sfxBusy;
+        if (active & config->unk08) {
+            func_80015FE0(D_80070D60, active & config->unk08, mask, &keyOn);
+            g_sndSeqState->unk10 &= ~g_sndSeqState->unk08;
+            active &= ~g_sndSeqState->unk08;
+        }
+        if (active != 0) {
+            // The do-while does nothing at run time, but without it gcc gives mask a different register.
+            do {
+                func_80015FE0(D_80070D60, active, mask, &keyOn);
+            } while (0);
+            g_sndSeqState->unk10 = 0;
+        }
+    }
+    active = D_80075028.unk00 & D_80075028.unk08;
+    if (active != 0) {
+        mask = 0x1000;
+        track = D_80072F70;
+        keyOn |= D_80075028.unk04;
+        do {
+            if (active & mask) {
+                func_80015AC8(track, mask);
+                if (track->unkF4.updateFlags != 0) {
+                    func_800150A8(track->unkF4.unk00, &track->unkF4, track->flags);
+                }
+                active &= ~mask;
+            }
+            mask <<= 1;
+            track++;
+        } while (active != 0);
+        D_80075028.unk04 = 0;
+    }
+    active = D_80077288[2];
+    if (active & 0x80) {
+        depth = (g_sndSeqState->unk48 << 4) >> 16;
+        SpuSetReverbModeDepth(depth, depth);
+        D_80077288[2] &= ~0x80;
+    }
+    if (active & 0x10) {
+        SpuSetNoiseClock(D_80075028.unk00 != 0 ? D_80075028.unk28 : g_sndSeqState->unk62);
+        D_80077288[2] &= ~0x10;
+    }
+    if (active & 0x100) {
+        func_80016C28((u32 *)&D_80077368[1], D_80073CA8->unk3C, g_sndSeqState->unk3C, D_80075028.unk1C);
+        func_80016C28((u32 *)&D_80077368[0], D_80073CA8->unk40, g_sndSeqState->unk40, D_80075028.unk20);
+        func_80016C28((u32 *)&D_80077368[2], D_80073CA8->unk44, g_sndSeqState->unk44, D_80075028.unk24);
+        spuSetTransferControl(D_80077368[0]);
+        spuSetDataFifo(D_80077368[1]);
+        spuSetTransferAddr(D_80077368[2]);
+        D_80077288[2] &= ~0x100;
+    }
+    if (keyOn != 0) {
+        spuSetReverbWorkAddr(keyOn);
+    }
+}
 
 /**
  * @brief Builds a voice bitmask from active tracks matching a track bitmask.
@@ -674,25 +793,87 @@ INCLUDE_ASM("asm/nonmatchings/snd_voice", func_800164D8);
  * @param trackMask Bitmask of tracks to check.
  * @param finalMask AND mask applied to the result after accumulation.
  */
-void func_80016A1C(u8 *tracks, s32 *resultPtr, s32 trackMask, s32 finalMask) {
+void func_80016A1C(SoundSeqTrack *tracks, u32 *resultPtr, u32 trackMask, u32 finalMask) {
     s32 bit = 1;
     s32 one = 1;
 
     do {
         if (trackMask & bit) {
-            s32 voice = ((SoundSeqTrack *)tracks)->unkF4.unk00;
+            s32 voice = tracks->unkF4.unk00;
             if ((u32)voice < 0x18) {
                 *resultPtr |= one << voice;
             }
         }
         trackMask &= ~bit;
-        tracks += 0x110;
+        tracks++;
         bit <<= 1;
     } while (trackMask != 0);
 
     *resultPtr &= finalMask;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016A7C);
+void func_80016A7C(void) {
+    u32 result = 0;
+    u32 finalMask;
+    u32 pending2 = 0;
+    u32 pending1;
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016C28);
+    finalMask = ~((D_80075028.unk00 | D_80075028.unk10) | D_800772A4);
+    if (D_80073CA8 != NULL) {
+        pending2 = D_80073CA8->unk18;
+        if (pending2 & D_80073CA8->unk08) {
+            func_80016A1C(D_80073C34, &result, pending2 & D_80073CA8->unk08, finalMask);
+            D_80073CA8->unk18 &= ~D_80073CA8->unk08;
+            pending2 &= ~D_80073CA8->unk08;
+        }
+    }
+    pending1 = g_sndSeqState->unk18;
+    if (pending1 & g_sndSeqState->unk08) {
+        func_80016A1C(D_80070D60, &result, pending1 & g_sndSeqState->unk08, finalMask);
+        g_sndSeqState->unk18 &= ~g_sndSeqState->unk08;
+        pending1 &= ~g_sndSeqState->unk08;
+    }
+    if (D_80073CA8 != NULL && pending2 != 0) {
+        func_80016A1C(D_80073C34, &result, pending2, finalMask);
+        D_80073CA8->unk18 = 0;
+    }
+    if (pending1 != 0) {
+        func_80016A1C(D_80070D60, &result, pending1, finalMask);
+        g_sndSeqState->unk18 = 0;
+    }
+    result |= D_80075028.unk0C;
+    D_80075028.unk0C = 0;
+    if (result != 0) {
+        spuSetIrqAddr(result);
+    }
+}
+
+void func_80016C28(u32 *out, u32 maskSecond, u32 maskMain, u32 extra) {
+    u32 result = 0;
+    u32 finalMask;
+    u32 pending2 = 0;
+    u32 pending1;
+
+    finalMask = ~((D_80075028.unk00 | D_80075028.unk10) | D_800772A4);
+    if (D_80073CA8 != NULL) {
+        pending2 = D_80073CA8->unk04 & maskSecond;
+        if (pending2 & D_80073CA8->unk08) {
+            func_80016A1C(D_80073C34, &result, pending2 & D_80073CA8->unk08, finalMask);
+            pending2 &= ~D_80073CA8->unk08;
+        }
+    }
+    pending1 = g_sndSeqState->unk04 & maskMain;
+    if (pending1 & g_sndSeqState->unk08) {
+        func_80016A1C(D_80070D60, &result, pending1 & g_sndSeqState->unk08, finalMask);
+        pending1 &= ~g_sndSeqState->unk08;
+    }
+    if (D_80073CA8 != NULL && pending2 != 0) {
+        func_80016A1C(D_80073C34, &result, pending2, finalMask);
+    }
+    if (pending1 != 0) {
+        func_80016A1C(D_80070D60, &result, pending1, finalMask);
+    }
+    result |= extra;
+    *out = result;
+    D_80077288[2] |= 0x100;
+}

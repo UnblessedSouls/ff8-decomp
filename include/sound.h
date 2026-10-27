@@ -275,12 +275,22 @@ extern VoicePoolEntry D_80074F20[12];
 
 typedef struct {
     /* 0x00 */ s32 unk00;
+    /* 0x04 */ s32 unk04;
+    /* 0x08 */ s32 unk08;
+    /* 0x0C */ s32 unk0C;
+} UnkStruct80074F10;
+
+extern UnkStruct80074F10 D_80074F10;
+
+typedef struct {
+    /* 0x00 */ s32 unk00;
     /* 0x04 */ s16 unk04;
     /* 0x06 */ s16 unk06;
 } UnkStruct80073CB0;
 
 extern UnkStruct80073CB0 D_80073CB0[];
 extern SoundMusicConfig *D_800772F8[];
+extern u32 D_800772A4;
 extern s16 D_80051854[];
 extern s16 D_80051954;
 
