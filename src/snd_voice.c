@@ -174,7 +174,7 @@ s32 sndCheckVoiceInMask(u8 *a0, s32 a1, s32 a2) {
     u32 i = 0;
     s32 bit = 1;
     do {
-        if (a2 == ((SoundSeqTrack *)a0)->voiceMask) {
+        if (a2 == ((SoundSeqTrack *)a0)->unkF4.unk00) {
             if (a1 & (bit << i)) {
                 return 1;
             }
@@ -222,7 +222,7 @@ void func_80016A1C(u8 *tracks, s32 *resultPtr, s32 trackMask, s32 finalMask) {
 
     do {
         if (trackMask & bit) {
-            s32 voice = ((SoundSeqTrack *)tracks)->voiceMask;
+            s32 voice = ((SoundSeqTrack *)tracks)->unkF4.unk00;
             if ((u32)voice < 0x18) {
                 *resultPtr |= one << voice;
             }

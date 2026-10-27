@@ -25,8 +25,8 @@ s32 func_80016DB4(s32 a0, SoundSeqTrack *a1) {
     if (a0 & 0x400) {
         if ((u32)(a1->instrument - 0x40) < 0x40) {
             s32 adj = 0x20000;
-            a1->sampleAddr = a1->sampleAddr + adj;
-            a1->sampleLoop = a1->sampleLoop + adj;
+            a1->unkF4.startAddr = a1->unkF4.startAddr + adj;
+            a1->unkF4.repeatAddr = a1->unkF4.repeatAddr + adj;
             a1->instrument = a1->instrument + 0x20;
         }
     }
@@ -47,8 +47,8 @@ s32 func_80016E08(s32 a0, SoundSeqTrack *a1) {
     if (a0 & 0x400) {
         if ((u32)(a1->instrument - 0x60) < 0x20) {
             s32 adj = (s32)0xFFFE0000;
-            a1->sampleAddr = a1->sampleAddr + adj;
-            a1->sampleLoop = a1->sampleLoop + adj;
+            a1->unkF4.startAddr = a1->unkF4.startAddr + adj;
+            a1->unkF4.repeatAddr = a1->unkF4.repeatAddr + adj;
             a1->instrument = a1->instrument - 0x20;
         }
     }
@@ -98,7 +98,7 @@ void sndInitTrack(SoundSeqTrack *track, s32 bankId) {
     track->duration = 0;
     track->cmdDataPtr = 0;
     track->durationDelta2 = 0;
-    track->pad90 = 0;
+    track->unk90 = 0;
     track->volumeAccum = 0;
     track->volumeDelta = 0;
     track->panFade = 0;
@@ -107,8 +107,8 @@ void sndInitTrack(SoundSeqTrack *track, s32 bankId) {
     track->flags = 0;
     track->panLfoStop = 0;
     track->timerActive = 0;
-    track->pad6E = 0xFFFF;
-    track->instOverride = 0;
+    track->unk6E = 0xFFFF;
+    track->unkF4.sweep = 0;
     track->panLfo = 0;
     track->volumeLfo = 0;
     track->delaySend = 0;
@@ -137,7 +137,7 @@ s32 sndBuildVoiceMask(u8 *a0, s32 a1) {
     s32 bit = 1;
     do {
         if (a1 & (bit << i)) {
-            s32 val = ((SoundSeqTrack *)a0)->voiceMask;
+            s32 val = ((SoundSeqTrack *)a0)->unkF4.unk00;
             if ((u32)val < 0x18) {
                 result |= (bit << val);
             }
@@ -171,16 +171,16 @@ void sndReleaseVoiceFromTracks(s32 voiceId) {
 
     track = D_80070D60;
     for (i = 32; i != 0; i--) {
-        if (track->voiceMask == voiceId)
-            track->voiceMask = 0x18;
+        if (track->unkF4.unk00 == voiceId)
+            track->unkF4.unk00 = 0x18;
         track++;
     }
 
     if (D_80073CA8 != NULL) {
         track = D_80073C34;
         for (i = 32; i != 0; i--) {
-            if (track->voiceMask == voiceId)
-                track->voiceMask = 0x18;
+            if (track->unkF4.unk00 == voiceId)
+                track->unkF4.unk00 = 0x18;
             track++;
         }
     }
@@ -489,7 +489,7 @@ void func_800197F4(u8 *param) {
         if (!(track->keyOnMask & 0x2000000)) {
             track->loopLimit = *param << 8;
             track->pitchFadeCounter = 0;
-            track->updateFlags |= 0x10;
+            track->unkF4.updateFlags |= 0x10;
         }
         track++;
     }
