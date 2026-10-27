@@ -110,7 +110,7 @@ void func_801E6994(s32 a0, s32 a1, s16 a2, s16 a3) {
     *(s16 *)(cfg + 0x4) = 0xF4;
     *(s16 *)(cfg + 0x6) = 0x12;
     *(s16 *)(cfg + 0x2) = a3;
-    DrawMenuWindow(a0, a1, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a0, a1, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menusts/nonmatchings/menusts", func_801E69E4);

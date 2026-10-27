@@ -3981,7 +3981,7 @@ static void *func_801E8024(ItemMenuState *s, void *ot, void *prim, s32 x, s32 y)
     g_menuDisplayCfg.y = y;
     g_menuDisplayCfg.w = 244;
     g_menuDisplayCfg.h = 18;
-    return DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /** @brief Draw the string stored in dataPtr. */
@@ -4741,7 +4741,7 @@ static void *func_801E934C(void *ot, void *prim, s32 x, s32 y, s32 entityId, s32
     cfg->y = y;
     cfg->w = 168;
     cfg->h = 40;
-    return DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

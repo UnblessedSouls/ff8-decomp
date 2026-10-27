@@ -3,6 +3,7 @@
 #include "menutips.h"
 #include "psxsdk/libgpu.h"
 #include "psxsdk/libetc.h"
+#include "psxsdk/libgte.h"
 
 extern u8 D_801ED430[];
 extern s16 D_801ED630;
@@ -365,7 +366,7 @@ s32 func_801E6514(s32 a0, s32 a1) {
     *(s16 *)(cfg + 0x2) = yPos;
     *(s16 *)(cfg + 0x4) = width;
     *(s16 *)(cfg + 0x6) = 0x14;
-    return DrawMenuWindow(a0, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(a0, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -404,7 +405,7 @@ s32 func_801E6668(s32 arg0, s32 arg1) {
     if (var_a3 != 0) {
         var_s1 = func_801F5F60(arg0, var_s1, g_menuTint[MENU_TINT_NORMAL], var_a3);
     }
-    return DrawMenuWindow(arg0, var_s1, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(arg0, var_s1, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -434,7 +435,7 @@ s32 func_801E6768(s32 a0, s32 a1) {
     }
     g_menuDisplayCfg.w = 0xF4;
     g_menuDisplayCfg.h = 0x16;
-    return DrawMenuWindow(disp, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

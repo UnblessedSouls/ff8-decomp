@@ -1102,7 +1102,7 @@ static s32 func_801E6E0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     g_menuDisplayCfg.y = arg3;
     g_menuDisplayCfg.w = 336;
     g_menuDisplayCfg.h = 21;
-    return DrawMenuWindow(arg0, arg1, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(arg0, arg1, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -1297,7 +1297,7 @@ static s32 func_801E722C(ShopMenuState *s, s32 arg1, s32 arg2, s32 arg3, s32 arg
     cfg->y = arg4;
     cfg->h = 119;
 
-    return DrawMenuWindow(arg1, arg2, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(arg1, arg2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -1377,7 +1377,7 @@ static s32 func_801E7508(ShopMenuState *s, s32 arg1, s32 arg2, s32 arg3, s32 arg
     g_menuDisplayCfg.y = arg4;
     g_menuDisplayCfg.h = 23;
 
-    return DrawMenuWindow(arg1, arg2, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(arg1, arg2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -1438,7 +1438,7 @@ static s32 func_801E7628(ShopMenuState *s, s32 arg1, s32 arg2, s32 arg3, s32 arg
     cfg->y = arg4;
     cfg->h = 66;
 
-    return DrawMenuWindow(arg1, arg2, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(arg1, arg2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -1503,7 +1503,7 @@ s32 func_801E77EC(s32 fieldShopId, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
         cfg->h = 20;
     }
 
-    arg2 = DrawMenuWindow(arg1, arg2, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    arg2 = DrawMenuWindow(arg1, arg2, ONE, g_menuTint[MENU_TINT_NORMAL]);
     return arg2;
 }
 
@@ -1535,7 +1535,7 @@ static void func_801E791C(u8 *msg, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
     cfg->w = 218;
     cfg->y = arg4;
     cfg->h = 21;
-    DrawMenuWindow(arg1, arg2, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(arg1, arg2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

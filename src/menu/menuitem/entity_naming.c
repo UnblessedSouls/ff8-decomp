@@ -553,7 +553,7 @@ static void *func_801EA538(EntityNamingMenuState *s, void *ot, DR_TPAGE *prim, s
     gs->y = y;
     gs->w = 258;
     gs->h = 32;
-    return DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -577,7 +577,7 @@ static void *func_801EA714(void *ot, void *prim, s32 x, s32 y) {
     g_menuDisplayCfg.y = y;
     g_menuDisplayCfg.w = 258;
     g_menuDisplayCfg.h = 26;
-    return DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -614,7 +614,7 @@ static void *func_801EA7E0(EntityNamingMenuState *s, void *ot, void *prim, s32 x
     gs->y = y;
     gs->w = 80;
     gs->h = 125;
-    prim = DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    prim = DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
     return prim;
 }
 
@@ -737,7 +737,7 @@ static void *func_801EAB00(EntityNamingMenuState *s, void *ot, void *prim, s32 x
     g_menuDisplayCfg.y = y;
     g_menuDisplayCfg.w = 258;
     g_menuDisplayCfg.h = 125;
-    return DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -761,7 +761,7 @@ static void *func_801EAB8C(void *ot, void *prim, s32 x, s32 y) {
     g_menuDisplayCfg.y = y;
     g_menuDisplayCfg.w = 90;
     g_menuDisplayCfg.h = 22;
-    return DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

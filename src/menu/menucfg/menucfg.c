@@ -185,7 +185,7 @@ static void func_801E61A0(u8 *text, s32 data, s32 value, s32 x, s32 y)
     s->y = y;
     s->h = 0x16;
 
-    DrawMenuWindow(data, value, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(data, value, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menucfg/nonmatchings/menucfg", func_801E625C);
@@ -216,7 +216,7 @@ static s32 func_801E67A8(s32 a0, s32 a1, s32 a2, s32 a3, s32 arg4) {
     *(s16 *)(cfg + 4) = 0x11C;
     *(s16 *)(cfg + 6) = 0x25;
     *(s16 *)(cfg + 2) = arg4;
-    return DrawMenuWindow(a1, a2, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(a1, a2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menucfg/nonmatchings/menucfg", func_801E6804);

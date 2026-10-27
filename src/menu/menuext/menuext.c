@@ -496,7 +496,7 @@ s32 func_801E7EB4(ExtMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->y = y;
     cfg->w = 0xA8;
     cfg->h = 0x28;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menuext/nonmatchings/menuext", func_801E8058);

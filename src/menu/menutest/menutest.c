@@ -2,6 +2,8 @@
 #include "menu.h"
 #include "menutest.h"
 #include "gamestate.h"
+#include "psxsdk/libgte.h"
+
 /**
  * @brief Test menu task state, allocated by func_801F179C.
  *
@@ -212,7 +214,7 @@ s32 func_801E64B4(s32 a0, s32 a1) {
     g_menuDisplayCfg.y = 6;
     g_menuDisplayCfg.w = maxW;
     g_menuDisplayCfg.h = 0x16;
-    return DrawMenuWindow(disp, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -256,7 +258,7 @@ s32 func_801E6570(TestMenuState *state, s32 a1, s32 a2) {
     cfg->y = 0x1D;
     cfg->w = 0x150;
     cfg->h = 0xA7;
-    return DrawMenuWindow(disp, v0, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, v0, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -284,7 +286,7 @@ s32 func_801E66A8(TestMenuState *state, s32 a1, s32 a2) {
     g_menuDisplayCfg.y = 0xC4;
     g_menuDisplayCfg.w = maxW;
     g_menuDisplayCfg.h = 0x14;
-    return DrawMenuWindow(disp, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

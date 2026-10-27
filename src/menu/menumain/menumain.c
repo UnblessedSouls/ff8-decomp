@@ -349,7 +349,7 @@ void *func_801EFBB4(void *ot, void *_prim, MenuRowCallback _drawRowCallback) {
     }
 
     cfg->iconType = 0;
-    prim = DrawMenuWindow(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    prim = DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
     cfg->iconType = iconType;
     func_801F0FD0(0, 0);
     return prim;
@@ -1422,7 +1422,7 @@ void func_801F38F8(s32 a0, s32 a1, s32 a2) {
     g_menuDisplayCfg.x = 0x18;
     g_menuDisplayCfg.y = 7;
     *(s32 *)&g_menuDisplayCfg.w = 0x001900F4; /* w=0xF4, h=0x19 packed */
-    DrawMenuWindow(a1, ret2, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a1, ret2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /** @brief Render text with explicit parameters (arg-reorder wrapper for func_801F0FEC). */
@@ -1545,7 +1545,7 @@ void func_801F4918(s32 a0, s32 a1, s32 a2) {
     g_menuDisplayCfg.y = 0xBE;
     g_menuDisplayCfg.w = 0xF4;
     g_menuDisplayCfg.h = 0x1A;
-    DrawMenuWindow(a1, ret, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a1, ret, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /* ======================================================================== */
@@ -2164,7 +2164,7 @@ void func_801F66B0(s32 ctx, s32 dl, s32 x, s32 y, s32 weaponId) {
     y += 7;
     name = getWeaponName(weaponId);
     dl = func_801F0FEC(ctx, dl, x, y, name, 7);
-    DrawMenuWindow(ctx, dl, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(ctx, dl, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

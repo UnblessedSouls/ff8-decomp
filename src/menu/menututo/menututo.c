@@ -896,7 +896,7 @@ s32 func_801E3EC0(s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->y = y;
     cfg->h = 0x16;
 
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -933,7 +933,7 @@ u32 func_801E3F8C(TutoState *state, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = w;
     cfg->h = h;
 
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -995,7 +995,7 @@ u32 func_801E4080(void *state, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = 0x86;
     cfg->h = 0x80;
 
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -1131,7 +1131,7 @@ s32 func_801E43D4(TutoState *state, s32 renderCtx, s32 cursorY) {
         cfg->y = 57;
         cfg->w = 202;
         cfg->h = 143 - (9 - state->availCount) * 15;
-        cursorY = DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+        cursorY = DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
     }
     return cursorY;
 }

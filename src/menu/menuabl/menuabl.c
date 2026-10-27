@@ -598,7 +598,7 @@ s32 func_801E3530(s32 a0, s32 a1, s16 a2, s16 a3) {
     cfg->w           = 0xF4;
     cfg->h           = 0x12;
     cfg->y           = a3;
-    return DrawMenuWindow(a0, a1, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(a0, a1, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

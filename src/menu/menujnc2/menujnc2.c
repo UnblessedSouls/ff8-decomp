@@ -3231,7 +3231,7 @@ s32 renderStatTableA(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x59;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3314,7 +3314,7 @@ s32 renderStatTableB(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x60;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3419,7 +3419,7 @@ s32 renderStatTableC(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x43;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3516,7 +3516,7 @@ s32 renderStatTableD(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x43;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3569,7 +3569,7 @@ s32 renderStatGrid(s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = 0x150;
     cfg->y = y;
     cfg->h = 0xA0;
-    return DrawMenuWindow(ctx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ctx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3639,7 +3639,7 @@ s32 renderStatDeltaBar(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     cfg->y = y;
     cfg->w = 244;
     cfg->h = h;
-    return DrawMenuWindow(renderCtx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, result, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3711,7 +3711,7 @@ s32 renderStatDeltaBarExt(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 
     g_menuDisplayCfg.w = barW;
     g_menuDisplayCfg.h = h;
 
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3849,7 +3849,7 @@ s32 renderGfMagicGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 xBas
     cursorY++;
     cursorY--;
     cfg->h = 0x5E;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4519,7 +4519,7 @@ s32 renderJunctionHeader(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x16;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4899,7 +4899,7 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x48;
-    return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4954,7 +4954,7 @@ s32 renderGfCompatGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x48;
-    return DrawMenuWindow(renderCtx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, result, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -5052,7 +5052,7 @@ s32 renderCharNameBar(s32 renderCtx, s32 cursorY, s32 x, s32 height, s32 charIdx
             u8 *namePtr = getCharName(g_gameState.chars[charIdx].characterId);
             cursorY = func_801F0FEC(renderCtx, cursorY, x, height, namePtr, gfInfo);
         }
-        return DrawMenuWindow(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+        return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
     } while (0);
 }
 

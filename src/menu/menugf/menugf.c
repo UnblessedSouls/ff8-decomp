@@ -2,6 +2,7 @@
 #include "menu_tint.h"
 #include "card.h"
 #include "menugf.h"
+#include "psxsdk/libgte.h"
 
 extern u8 g_menuDisplayCfg[];
 extern u8 g_gameState[];
@@ -123,7 +124,7 @@ void func_801E6C84(s32 a0, s32 a1) {
     *(s16 *)(cfg + 0x02) = 0x38;
     *(s16 *)(cfg + 0x04) = 0x150;
     *(s16 *)(cfg + 0x06) = 0xA0;
-    DrawMenuWindow(ctx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(ctx, result, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
