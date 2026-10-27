@@ -1,9 +1,10 @@
 #include "common.h"
+#include "psxsdk/libspu.h"
 #include "sound.h"
 #include "snd_dma.h"
 
 extern volatile s32 D_80074ED4;
-extern s32 D_80074E88;
+extern u8 D_80074E88[];
 extern u8 D_800516B8[];
 extern s32 D_8005169C;
 
@@ -16,9 +17,9 @@ u32 sndValidateBank(u32 *a0) {
     return *a0 + 0xB0BEB4BF;
 }
 
-/** @brief Calls func_8003E494(0) and clears D_80074ED4. */
+/** @brief Calls SpuSetTransferCallback(NULL) and clears D_80074ED4. */
 void sndDmaCompleteCallback(void) {
-    func_8003E494(0);
+    SpuSetTransferCallback(NULL);
     D_80074ED4 = 0;
 }
 
@@ -26,39 +27,39 @@ void sndDmaCompleteCallback(void) {
  * @brief Sets the SPU DMA active flag and registers the completion callback.
  *
  * Sets D_80074ED4 to 1 (DMA active), then registers sndDmaCompleteCallback as
- * the transfer completion callback via func_8003E494.
+ * the transfer completion callback via SpuSetTransferCallback.
  */
 /**
  * @brief Sets the SPU DMA active flag and registers the completion callback.
  *
  * Sets D_80074ED4 to 1 (DMA active), then registers sndDmaCompleteCallback as
- * the transfer completion callback via func_8003E494.
+ * the transfer completion callback via SpuSetTransferCallback.
  */
 void sndDmaSetActive(void) {
     D_80074ED4 = 1;
-    func_8003E494((s32)sndDmaCompleteCallback);
+    SpuSetTransferCallback(sndDmaCompleteCallback);
 }
 
 /**
  * @brief Sets the SPU DMA active flag, registers callback, and initiates SPU write.
  *
  * Sets D_80074ED4 to 1, registers sndDmaCompleteCallback as the completion callback,
- * then calls func_8003E3A4 to begin the SPU write with the given address and size.
+ * then calls SpuWrite to begin the SPU write with the given address and size.
  *
  * @param a0 SPU destination address.
  * @param a1 Transfer size in bytes.
  */
-void sndDmaWriteSpu(s32 a0, s32 a1) {
+void sndDmaWriteSpu(u8 *a0, u32 a1) {
     D_80074ED4 = 1;
-    func_8003E494((s32)sndDmaCompleteCallback);
-    func_8003E3A4(a0, a1);
+    SpuSetTransferCallback(sndDmaCompleteCallback);
+    SpuWrite(a0, a1);
 }
 
 /** @brief Calls sndDmaSetActive, then SpuRead with a0/a1 as arguments.
  *  @param a0 SPU read address.
  *  @param a1 SPU read size.
  */
-void sndDmaReadSpu(s32 a0, s32 a1) {
+void sndDmaReadSpu(u8 *a0, u32 a1) {
     sndDmaSetActive();
     SpuRead(a0, a1);
 }
@@ -112,14 +113,14 @@ INCLUDE_ASM("asm/nonmatchings/snd_dma", func_80014974);
  */
 void sndSpuInit(void) {
     SpuStart();
-    SpuInitMalloc(4, (s32)&D_80074E88);
+    SpuInitMalloc(4, D_80074E88);
     SpuSetTransferMode(0);
     SpuSetTransferStartAddr(0x1010);
-    sndDmaWriteSpu((s32)D_800516B8, 0x40);
+    sndDmaWriteSpu(D_800516B8, 0x40);
     sndDmaWait();
     func_80014974();
     SpuSetIRQ(0);
-    SpuSetIRQCallback(0);
+    SpuSetIRQCallback(NULL);
 
     do {
     } while (SetRCnt(0xF2000002, 0x44E8, 0x1000) == 0);
@@ -141,11 +142,11 @@ void sndSpuInit(void) {
  * If playback is active (D_80074ED4 == 1), sends a stop command and waits
  * for DMA completion. Stops root counter 2, undelivers and disables/closes
  * the associated event, resets all voice IRQ addresses, and calls
- * func_8003DE44 (SpuQuit) for final SPU cleanup.
+ * SpuQuit for final SPU cleanup.
  */
 void sndSpuShutdown(void) {
     if (D_80074ED4 == 1) {
-        sndDmaWriteSpu((s32)D_800516B8, 0x40);
+        sndDmaWriteSpu(D_800516B8, 0x40);
         sndDmaWait();
     }
 
@@ -161,7 +162,7 @@ void sndSpuShutdown(void) {
     } while (CloseEvent(D_8005169C) == 0);
 
     spuSetIrqAddr(0xFFFFFF);
-    func_8003DE44();
+    SpuQuit();
 }
 
 /**
