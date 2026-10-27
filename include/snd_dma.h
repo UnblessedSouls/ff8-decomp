@@ -14,6 +14,7 @@
 extern void func_800146F0(u32 *src, s32 *dst, s32 base, s32 count);
 extern u32 sndValidateBank(u32 *a0);
 extern s32 func_800148B0(u32 *data, s32 wait, s32 slot, s32 spuAddr);
+extern void func_80014974(void);
 extern void sndDmaCompleteCallback(void);
 extern void sndDmaSetActive(void);
 extern void sndDmaWriteSpu(u8 *a0, u32 a1);

@@ -1,14 +1,12 @@
 #include "common.h"
 #include "sound.h"
+#include "snd_init.h"
 #include "snd_bank.h"
 #include "snd_note.h"
 #include "snd_track.h"
 
 extern s32 D_80074EB8[];
-extern s32 D_80074EB0;
 extern VoicePoolEntry D_80074F20[12];
-extern u16 D_80074FE4;
-extern s32 D_80075078;
 
 /**
  * @brief Adjusts instrument index upward if flag 0x400 is set and instrument is in range.

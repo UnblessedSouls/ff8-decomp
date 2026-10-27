@@ -5,13 +5,9 @@
 #include "snd_bank.h"
 
 extern u16 D_80073E62;
-extern s32 D_80077284;
 extern u16 D_80073E60;
-extern s32 D_80077280;
 extern s32 D_8007728C;
 extern s32 D_800772A4;
-extern s32 D_800772F4;
-extern s32 D_8007507C;
 
 /**
  * @brief Clears D_80073E62, stores *a0 << 16 into D_80077284.

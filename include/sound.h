@@ -255,6 +255,18 @@ extern SoundSfxConfig D_80075028;
 extern SoundMusicConfig *D_80073CA8;
 extern SoundSeqTrack D_80070D60[];
 extern SoundSeqTrack *D_80073C34;
+extern SoundMusicConfig D_80073D70;
+extern SoundMusicConfig D_80073DF0;
+extern SoundSeqTrack *D_80074EE0;
+extern s32 D_800772F4;
+extern s32 D_80077280;
+extern s32 D_80077284;
+extern s32 D_8007507C;
+extern s32 D_80077368[];
+extern s32 D_80072F60[];
+extern s32 D_80072F68;
+extern s32 D_80074EB0;
+extern s32 D_80074F18;
 
 /** @brief 12-entry SFX play queue, replayed by @c func_800BF718 after a sound reset. */
 extern VoicePoolEntry D_80074F20[12];

@@ -4,5 +4,6 @@
 #include "sound.h"
 
 extern s32 func_8001A1E8(u32 cmd);
+extern void sndSetReverbMode(s32 mode);
 
 #endif /* SND_PARAM_H */

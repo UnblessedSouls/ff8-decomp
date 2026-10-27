@@ -37,8 +37,10 @@ extern s32  D_80074EC4;          /* func_80014190: bank-ID slot, default mode */
 extern s32  D_80074EC8;          /* func_80014190: bank-ID slot, mode 1 */
 extern s32  D_80074ECC;          /* func_80014190: bank-ID slot, mode 2 */
 extern volatile s32 D_80074ED4;
+extern u16 D_80074FE4;
 extern s32  D_80074FE8[];        /* parsed bank header (level/addr/counts) */
 extern s32  D_80074FF8;          /* decode work buffer / scratch pointer */
+extern s32 D_80075078;
 extern s32  g_sndCmdArgs[4];    /* sound-command argument buffer (filled per command, read by the dispatcher) */
 extern s32  D_80077288[];
 extern s32  D_8007728C;

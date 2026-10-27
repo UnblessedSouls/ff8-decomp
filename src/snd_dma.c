@@ -4,6 +4,7 @@
 #include "snd_dma.h"
 #include "snd_note.h"
 #include "snd_init.h"
+#include "snd_param.h"
 
 extern u8 D_80074E88[];
 
@@ -125,7 +126,111 @@ s32 func_800148B0(u32 *data, s32 wait, s32 slot, s32 spuAddr) {
     return -1;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_dma", func_80014974);
+void func_80014974(void) {
+    SoundSeqTrack *t;
+    u16 i;
+    u16 *spu;
+
+    D_80074ED4 = 0;
+    g_sndSeqState = &D_80073D70;
+    D_80073CA8 = NULL;
+    D_80074EE0 = D_80070D60;
+    t = D_80074EE0;
+    D_80073C34 = NULL;
+    D_80073DE0[1] = 0;
+    D_80073DE0[0] = 0;
+    D_80074EB8[5] = 0;
+    D_80074EB8[4] = 0;
+    D_80074EB8[3] = 0;
+    D_80074EB8[2] = 0;
+    D_80074EB8[1] = 0;
+    D_80077288[0] = 0;
+    D_80074EB8[0] = 0;
+    D_80077288[1] = 1;
+    D_80075028.unk00 = 0;
+    g_sndSeqState->unk04 = 0;
+    g_sndSeqState->unk08 = 0;
+    g_sndSeqState->unk5E = 0;
+    D_80075028.unk10 = 0;
+    g_sndSeqState->unk1C = 0;
+    D_80073DF0.unk5E = 0;
+    D_80073DF0.unk04 = 0;
+    g_sndSeqState->unk50 = 0x7F0000;
+    D_80075078 = 0x7FFF0000;
+    D_80073E60 = 0;
+    D_80077280 = 0;
+    D_80073E62 = 0;
+    D_80077284 = 0;
+    g_sndSeqState->unk58 = 0;
+    D_80074FE4 = 0;
+    D_80075028.unk1C = 0;
+    g_sndSeqState->unk3C = 0;
+    D_80075028.unk20 = 0;
+    g_sndSeqState->unk40 = 0;
+    spu = (u16 *)0x1F801D80;
+    *spu = 0x3FFF;
+    spu = (u16 *)0x1F801D82;
+    *spu = 0x3FFF;
+    spu = (u16 *)0x1F801DB0;
+    *spu = 0x7FFF;
+    spu = (u16 *)0x1F801DB2;
+    *spu = 0x7FFF;
+    spu = (u16 *)0x1F801DAA;
+    i = *spu;
+    D_80074EB0 = 0;
+    D_8007507C = 0;
+    D_800772F4 = 0;
+    D_80075028.unk24 = 0;
+    g_sndSeqState->unk44 = 0;
+    g_sndSeqState->unk68 = 0;
+    g_sndSeqState->unk66 = 0;
+    g_sndSeqState->unk64 = 0;
+    g_sndSeqState->unk6C = 0;
+    g_sndStream.panVolume = 0x7F00;
+    g_sndStream.panTarget = 0;
+    D_80077368[2] = 0;
+    D_80077368[1] = 0;
+    D_80077368[0] = 0;
+    D_80074F18 = 0;
+    *spu = (i & 0xFFFA) | 1;
+
+    for (i = 0; i < 32; i++, t++) {
+        t->flags = 0;
+        t->unkF4.unk00 = 0x18;
+        t->voiceActive = 0;
+        t->unk54 = 0;
+    }
+
+    for (t = &D_80072F70[0], i = 12; i < 24; i++, t++) {
+        t->flags = 0;
+        t->unkF4.unk00 = i;
+        t->voiceActive = 1;
+        t->unk54 = 0;
+        t->expression = 0x7F00;
+        t->exprFade = 0;
+        t->pitchFadeCounter = 0;
+        t->loopLimit = 0;
+        t->panFadeTarget = 0;
+    }
+
+    g_sndSeqState->unk18 = 0;
+    g_sndSeqState->unk14 = 0;
+    g_sndSeqState->unk10 = 0;
+    D_80075028.unk18 = 1;
+    D_80075028.unk14 = 0x66A80000;
+    D_80075028.unk0C = 0;
+    D_80075028.unk08 = 0;
+    D_80075028.unk04 = 0;
+    g_sndSeqState->unk48 = 0x3FFF000;
+    g_sndSeqState->unk4C = 0;
+    g_sndSeqState->unk5A = 0;
+    D_80077288[2] |= 0x80;
+    sndSetReverbMode(4);
+    SpuSetReverb(1);
+    D_80072F60[1] = 0;
+    D_80072F60[0] = 0;
+    D_80072F68 = 0;
+}
 
 /**
  * @brief Initializes the SPU hardware and sets up the sound engine timer.
