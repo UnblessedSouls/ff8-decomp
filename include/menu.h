@@ -27,7 +27,7 @@ typedef s32 (*MenuDrawCallback)();
  * @brief Display/rendering configuration for menu panels.
  *
  * Shared across menu overlays (menumain, menucrd, menutest, etc.).
- * Written before calling rendering callbacks (func_801EF9AC,
+ * Written before calling rendering callbacks (DrawMenuWindow,
  * func_801EFBB4, func_801EF800) to configure the next panel draw.
  *
  * Lives at 0x801FAB00 in menumain BSS. Overlays reference it via

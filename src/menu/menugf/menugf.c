@@ -103,7 +103,7 @@ INCLUDE_ASM("asm/ovl/menugf/nonmatchings/menugf", func_801E6BB8);
  * Calls getGfAvailabilityMask to get a status value, then passes it along with
  * position constants to func_801E69B0 for rendering. Configures g_menuDisplayCfg
  * with icon 0x50, position (0x18, 0x38), dimensions (0x150 x 0xA0), and
- * calls func_801EF9AC for final display.
+ * calls DrawMenuWindow for final display.
  *
  * @param a0 GF context pointer.
  * @param a1 Render context.
@@ -123,7 +123,7 @@ void func_801E6C84(s32 a0, s32 a1) {
     *(s16 *)(cfg + 0x02) = 0x38;
     *(s16 *)(cfg + 0x04) = 0x150;
     *(s16 *)(cfg + 0x06) = 0xA0;
-    func_801EF9AC(ctx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(ctx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

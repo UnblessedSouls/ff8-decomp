@@ -93,7 +93,7 @@ INCLUDE_ASM("asm/ovl/menusts/nonmatchings/menusts", func_801E68A4);
  * @brief Configure and draw a status menu panel border.
  *
  * Sets up g_menuDisplayCfg with no icon, position from a2/a3,
- * fixed size (0xF4 x 0x12), then draws via func_801EF9AC.
+ * fixed size (0xF4 x 0x12), then draws via DrawMenuWindow.
  *
  * @param a0 Display list pointer
  * @param a1 OT pointer
@@ -110,7 +110,7 @@ void func_801E6994(s32 a0, s32 a1, s16 a2, s16 a3) {
     *(s16 *)(cfg + 0x4) = 0xF4;
     *(s16 *)(cfg + 0x6) = 0x12;
     *(s16 *)(cfg + 0x2) = a3;
-    func_801EF9AC(a0, a1, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a0, a1, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menusts/nonmatchings/menusts", func_801E69E4);
@@ -143,14 +143,14 @@ s32 func_801E7278(BattleCharData *cd) {
  * Walks D_801E95CC (status entry table, sentinel 0xFF) and for each
  * status flag set in the character's bitfield, draws the status text
  * icon and the (atkStatusHit - 100) numeric value, up to 3 entries.
- * Then draws the surrounding panel via func_801EF9AC if any entries
+ * Then draws the surrounding panel via DrawMenuWindow if any entries
  * were drawn.
  *
  * @param displayList GPU display list pointer.
  * @param ot          Ordering table pointer (returned chained).
  * @param x           Panel base X position.
  * @param y           Panel base Y position.
- * @param mode        Render mode passed to func_801EF9AC.
+ * @param mode        Render mode passed to DrawMenuWindow.
  * @return Updated OT pointer.
  */
 s32 func_801E72D8(s32 displayList, s32 ot, s32 x, s32 y, s32 mode) {
@@ -204,7 +204,7 @@ s32 func_801E72D8(s32 displayList, s32 ot, s32 x, s32 y, s32 mode) {
         cfgPtr->y = y;
         cfgPtr->w = 0x82;
         cfgPtr->h = 0x38;
-        ot = func_801EF9AC(displayList, ot, mode, g_menuTint[MENU_TINT_NORMAL]);
+        ot = DrawMenuWindow(displayList, ot, mode, g_menuTint[MENU_TINT_NORMAL]);
     }
 
     return ot;
@@ -308,19 +308,19 @@ void func_801E8950(s32 a0, s32 a1, s32 a2, s32 a3, s32 arg5, s32 arg6) {
  *
  * Looks up a function pointer from D_801E961C[a1], calls it with
  * (a0, a2, a3, stackArg1, stackArg2), then passes the result and
- * other parameters to func_801EF9AC for GPU display.
+ * other parameters to DrawMenuWindow for GPU display.
  *
  * @param a0 Status entry data pointer
  * @param a1 Function table index
- * @param a2 Parameter passed as a1 to table function, then as a0 to func_801EF9AC
+ * @param a2 Parameter passed as a1 to table function, then as a0 to DrawMenuWindow
  * @param a3 Parameter passed as a2 to table function
- * @param stackArg1 Passed as a3 to table function, then as stack arg to func_801EF9AC
- * @param stackArg2 Passed as stack arg to table function, then as a2 to func_801EF9AC
+ * @param stackArg1 Passed as a3 to table function, then as stack arg to DrawMenuWindow
+ * @param stackArg2 Passed as stack arg to table function, then as a2 to DrawMenuWindow
  */
 void func_801E8990(s32 a0, s32 a1, s32 a2, s32 a3, s32 arg5, s32 arg6, s32 arg7) {
     s32 (*fn)(s32, s32, s32, s32, s32, s32) = (void *)D_801E961C[a1];
     s32 result = fn(a0, a2, a3, arg5, arg6, arg7);
-    func_801EF9AC(a2, result, arg7, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a2, result, arg7, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menusts/nonmatchings/menusts", func_801E8A08);
