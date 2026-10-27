@@ -306,7 +306,7 @@ void sndCmd45(void) {
  * @return Combined key-on mask (24-bit), or 0 if D_80075028 is 0.
  */
 s32 sndGatherKeyOnMask(void) {
-    s32 mask = D_80075028[0];
+    s32 mask = D_80075028.unk00;
     SoundSeqTrack *track;
     s32 bit;
     s32 result;
@@ -346,7 +346,7 @@ s32 sndFindKeyOnMask(s32 keyOnMask) {
     if (keyOnMask == 0) {
         return 0;
     }
-    mask = D_80075028[0];
+    mask = D_80075028.unk00;
     if (mask == 0) {
         return 0;
     }

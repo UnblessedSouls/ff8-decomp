@@ -4,7 +4,6 @@
 #include "snd_param.h"
 #include "snd_bank.h"
 
-extern s32 D_80075028;
 extern u16 D_80073E62;
 extern s32 D_80077284;
 extern u16 D_80073E60;
@@ -75,7 +74,7 @@ void sndTransferDataWithMode(s32 *a0) {
  *
  * Iterates over 12 CD-audio tracks (D_80072F70, stride 0x110). For each
  * track whose voice bit is set in D_80075028 but does NOT have the
- * 0x2000000 flag in its keyOnMask, ORs the bit into D_80075028+0xC
+ * 0x2000000 flag in its keyOnMask, ORs the bit into D_80075028.unk0C
  * (pending clear mask), calls sndTrackClearVoiceBits, and zeroes the
  * track's flags field at offset 0x30. Sets hardware update flag 0x110
  * in D_80077288+8.
@@ -154,7 +153,7 @@ void func_80019DB0(void) {
     s32 tmp;
 
     if (g_sndSeqState->unk04 != 0) {
-        unusedMask = ~(D_80075028 | D_800772A4) & 0xFFFFFF;
+        unusedMask = ~(D_80075028.unk00 | D_800772A4) & 0xFFFFFF;
         if (unusedMask != 0) {
             bit = 1;
             voice = 0;
@@ -194,7 +193,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_param", func_80019EA0);
  * Reads the voice activation bitmask from D_80075028. For each bit, checks
  * if the corresponding CD-audio track (D_80072F70, stride 0x110) has the
  * 0x2000000 flag set in its keyOnMask (offset 0x24). If so, clears that
- * bit from the mask. Then stores the remaining mask to D_80075028+0x10,
+ * bit from the mask. Then stores the remaining mask to D_80075028.unk10,
  * clears those bits from D_80075028, and silences each remaining voice
  * (starting from voice 12) via SPU register writes.
  * Sets bit 1 of D_800772F4.
@@ -205,10 +204,9 @@ void func_80019F3C(void) {
     s32 voice;
     s32 counter;
     s32 *trackPtr;
-    s32 *ctrlPtr;
 
-    if (D_80075028 != 0) {
-        voiceMask = D_80075028;
+    if (D_80075028.unk00 != 0) {
+        voiceMask = D_80075028.unk00;
         trackPtr = (s32 *)((s32)D_80072F70);
         bit = 0x1000;
         counter = 0;
@@ -225,9 +223,8 @@ void func_80019F3C(void) {
 
         bit = 0x1000;
         voice = 12;
-        ctrlPtr = (s32 *)((s32)&D_80075028);
-        ctrlPtr[4] = voiceMask;
-        D_80075028 &= ~voiceMask;
+        D_80075028.unk10 = voiceMask;
+        D_80075028.unk00 &= ~voiceMask;
         if (voiceMask != 0) {
             do {
                 if (voiceMask & bit) {

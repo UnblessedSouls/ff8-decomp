@@ -234,7 +234,24 @@ typedef struct {
     /* 0x70 */ u8 unk70[16];
 } SoundMusicConfig;
 
+typedef struct {
+    /* 0x00 */ u32 unk00;
+    /* 0x04 */ u32 unk04;
+    /* 0x08 */ u32 unk08;
+    /* 0x0C */ u32 unk0C;
+    /* 0x10 */ u32 unk10;
+    /* 0x14 */ s32 unk14;
+    /* 0x18 */ u32 unk18;
+    /* 0x1C */ u32 unk1C;
+    /* 0x20 */ u32 unk20;
+    /* 0x24 */ u32 unk24;
+    /* 0x28 */ u16 unk28;
+    /* 0x2A */ u16 unk2A;
+    /* 0x2C */ u32 unk2C;
+} SoundSfxConfig;
+
 extern SoundMusicConfig *g_sndSeqState;
+extern SoundSfxConfig D_80075028;
 extern SoundMusicConfig *D_80073CA8;
 extern SoundSeqTrack D_80070D60[];
 extern SoundSeqTrack *D_80073C34;

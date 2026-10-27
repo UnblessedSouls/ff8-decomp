@@ -9,7 +9,6 @@ extern s32 D_80074EB0;
 extern VoicePoolEntry D_80074F20[12];
 extern u16 D_80074FE4;
 extern s32 D_80075078;
-extern s32 D_80075028[];
 
 /**
  * @brief Adjusts instrument index upward if flag 0x400 is set and instrument is in range.
@@ -224,7 +223,7 @@ void func_80017D14(SoundMusicConfig *seq, SoundSeqTrack *tracks) {
 }
 
 void func_80017D5C(void) {
-    s32 value = D_80075028[0];
+    s32 value = D_80075028.unk00;
     s32 mask;
     s32 bit;
     SoundSeqTrack *tracks;
@@ -457,7 +456,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_bank", func_800192D8);
  * @brief Applies expression value to all active tracks matching a bitmask.
  *
  * Iterates 12 tracks in D_80072F70 (stride 0x110). For each track whose
- * bit is set in D_80075028[0] and whose flags do NOT have bit 0x2000000,
+ * bit is set in D_80075028.unk00 and whose flags do NOT have bit 0x2000000,
  * reads the expression byte from a0, clears the halfword at +0x8A,
  * stores (byte & 0x7F) << 8 at +0x6A, and ORs 0x3 into updateFlags.
  *

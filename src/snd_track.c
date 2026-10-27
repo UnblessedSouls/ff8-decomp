@@ -5,7 +5,6 @@
 #include "snd_bank.h"
 #include "snd_note.h"
 
-extern s32 D_80075028[];
 extern s32 D_80077288[];
 extern s32 D_80074EE8[];
 extern u8 D_80051824;
@@ -63,13 +62,13 @@ void sndTrackApplyInstrument(SoundSeqTrack *track, s32 a1) {
  */
 void sndTrackClearVoiceBits(SoundSeqTrack *track, s32 a1) {
     s32 mask = ~a1;
-    D_80075028[0] &= mask;
-    D_80075028[4] &= mask;
-    D_80075028[7] &= mask;
-    D_80075028[8] &= mask;
-    D_80075028[9] &= mask;
-    D_80075028[1] &= mask;
-    D_80075028[2] &= mask;
+    D_80075028.unk00 &= mask;
+    D_80075028.unk10 &= mask;
+    D_80075028.unk1C &= mask;
+    D_80075028.unk20 &= mask;
+    D_80075028.unk24 &= mask;
+    D_80075028.unk04 &= mask;
+    D_80075028.unk08 &= mask;
     track->keyOnMask = 0;
     track->keyOffMask = 0;
 }
@@ -520,7 +519,7 @@ void sndTrackStopPanLfo(SoundSeqTrack *track) {
  * @brief Enables noise mode for the given voice bitmask on the appropriate SPU channel.
  *
  * If the track's channel (offset +0x60) is 0, sets bits in the primary SPU
- * state (g_sndSeqState[0x3C/4]); otherwise sets bits in D_80075028[0x1C/4].
+ * state (g_sndSeqState[0x3C/4]); otherwise sets bits in D_80075028.unk1C.
  * Marks the SPU dirty flags (D_80077288) with 0x110 to schedule an update.
  *
  * @param a0 Pointer to the sequence track structure.
@@ -531,7 +530,7 @@ void sndTrackEnableNoise(s32 *a0, s32 a1) {
         SoundMusicConfig *p = g_sndSeqState;
         p->unk3C = p->unk3C | a1;
     } else {
-        D_80075028[0x1C / 4] = D_80075028[0x1C / 4] | a1;
+        D_80075028.unk1C = D_80075028.unk1C | a1;
     }
     D_80077288[0x8 / 4] = D_80077288[0x8 / 4] | 0x110;
 }
@@ -551,7 +550,7 @@ void sndTrackDisableNoise(s32 *a0, s32 a1) {
         SoundMusicConfig *p = g_sndSeqState;
         p->unk3C = p->unk3C & ~a1;
     } else {
-        D_80075028[0x1C / 4] = D_80075028[0x1C / 4] & ~a1;
+        D_80075028.unk1C = D_80075028.unk1C & ~a1;
     }
     D_80077288[0x8 / 4] = D_80077288[0x8 / 4] | 0x110;
     ((SoundSeqTrack *)a0)->noiseDuration = 0;
@@ -562,7 +561,7 @@ void sndTrackDisableNoise(s32 *a0, s32 a1) {
  *
  * If the track's channel (offset +0x60) is 0, sets bits in the primary SPU
  * state (g_sndSeqState[0x44/4]); otherwise checks flag 0x10000 at offset +0x30
- * before setting bits in D_80075028[0x24/4]. Marks dirty flags with 0x100.
+ * before setting bits in D_80075028.unk24. Marks dirty flags with 0x100.
  *
  * @param a0 Pointer to the sequence track structure.
  * @param a1 Bitmask of SPU voices to enable reverb for.
@@ -572,7 +571,7 @@ void sndTrackEnableReverb(s32 *a0, s32 a1) {
         SoundMusicConfig *p = g_sndSeqState;
         p->unk44 = p->unk44 | a1;
     } else if (((SoundSeqTrack *)a0)->flags & 0x10000) {
-        D_80075028[0x24 / 4] = D_80075028[0x24 / 4] | a1;
+        D_80075028.unk24 = D_80075028.unk24 | a1;
     }
     D_80077288[0x8 / 4] = D_80077288[0x8 / 4] | 0x100;
 }
@@ -592,7 +591,7 @@ void sndTrackDisableReverb(s32 *a0, s32 a1) {
         SoundMusicConfig *p = g_sndSeqState;
         p->unk44 = p->unk44 & ~a1;
     } else {
-        D_80075028[0x24 / 4] = D_80075028[0x24 / 4] & ~a1;
+        D_80075028.unk24 = D_80075028.unk24 & ~a1;
     }
     D_80077288[0x8 / 4] = D_80077288[0x8 / 4] | 0x100;
     ((SoundSeqTrack *)a0)->reverbDuration = 0;
@@ -602,7 +601,7 @@ void sndTrackDisableReverb(s32 *a0, s32 a1) {
  * @brief Enables pitch modulation for the given voice bitmask on the appropriate channel.
  *
  * If the track's channel (offset +0x60) is 0, sets bits in the primary SPU
- * state (g_sndSeqState[0x40/4]); otherwise sets bits in D_80075028[0x20/4].
+ * state (g_sndSeqState[0x40/4]); otherwise sets bits in D_80075028.unk20.
  * Marks SPU dirty flags with 0x100 to schedule an update.
  *
  * @param a0 Pointer to the sequence track structure.
@@ -613,7 +612,7 @@ void sndTrackEnablePitchMod(s32 *a0, s32 a1) {
         SoundMusicConfig *p = g_sndSeqState;
         p->unk40 = p->unk40 | a1;
     } else {
-        D_80075028[0x20 / 4] = D_80075028[0x20 / 4] | a1;
+        D_80075028.unk20 = D_80075028.unk20 | a1;
     }
     D_80077288[0x8 / 4] = D_80077288[0x8 / 4] | 0x100;
 }
@@ -622,7 +621,7 @@ void sndTrackEnablePitchMod(s32 *a0, s32 a1) {
  * @brief Disables pitch modulation for the given voice bitmask.
  *
  * If the track's channel (offset +0x60) is 0, clears bits in the primary SPU
- * state (g_sndSeqState[0x40/4]); otherwise clears bits in D_80075028[0x20/4].
+ * state (g_sndSeqState[0x40/4]); otherwise clears bits in D_80075028.unk20.
  * Marks SPU dirty flags with 0x100.
  *
  * @param a0 Pointer to the sequence track structure.
@@ -633,7 +632,7 @@ void func_8001D484(s32 *a0, s32 a1) {
         SoundMusicConfig *p = g_sndSeqState;
         p->unk40 = p->unk40 & ~a1;
     } else {
-        D_80075028[0x20 / 4] = D_80075028[0x20 / 4] & ~a1;
+        D_80075028.unk20 = D_80075028.unk20 & ~a1;
     }
     D_80077288[0x8 / 4] = D_80077288[0x8 / 4] | 0x100;
 }
@@ -1160,7 +1159,7 @@ void sndTrackResetSequence(void) {
  *
  * If g_sndStream.active (the IRQ voice bitmask) is non-zero, disables
  * SPU IRQ, clears the IRQ callback, resets the IRQ address to the stored
- * value, clears the corresponding bits in D_80075028[8], marks dirty flags,
+ * value, clears the corresponding bits in D_80075028.unk20, marks dirty flags,
  * and zeroes the IRQ voice mask.
  */
 void sndStreamDisableIrq(void) {
@@ -1169,7 +1168,7 @@ void sndStreamDisableIrq(void) {
         SpuSetIRQ(0);
         SpuSetIRQCallback(NULL);
         spuSetIrqAddr(s0->active);
-        D_80075028[8] &= ~s0->active;
+        D_80075028.unk20 &= ~s0->active;
         D_80077288[2] |= 0x100;
         s0->active = 0;
     }
@@ -1244,12 +1243,12 @@ void sndStreamCallbackStereoHigh(void) {
 
 /**
  * @brief Unpacks struct fields into args, calls func_8001E0CC, then clears
- *        the IRQ voice bits from D_80075028[0].
+ *        the IRQ voice bits from D_80075028.unk00.
  * @param a0 Pointer to 3-word struct: [data_ptr, loop_flag, callback].
  */
 void sndStreamStartPlayback(s32 *a0) {
     func_8001E0CC(a0[0], a0[1], a0[2]);
-    D_80075028[0] &= ~g_sndStream.active;
+    D_80075028.unk00 &= ~g_sndStream.active;
 }
 
 /** @brief Calls sndStreamDisableIrq. */
@@ -1296,22 +1295,22 @@ INCLUDE_ASM("asm/nonmatchings/snd_track", func_8001EDD4);
 
 /**
  * @brief Unpacks struct fields into 4 args, calls func_8001EC0C, then clears
- *        the IRQ voice bits from D_80075028[0].
+ *        the IRQ voice bits from D_80075028.unk00.
  * @param a0 Pointer to 4-word struct.
  */
 void sndStreamStartPlayback4(s32 *a0) {
     func_8001EC0C(a0[0], a0[1], a0[2], a0[3]);
-    D_80075028[0] &= ~g_sndStream.active;
+    D_80075028.unk00 &= ~g_sndStream.active;
 }
 
 /**
  * @brief Unpacks struct fields into 2 args, calls func_8001EDD4, then clears
- *        the IRQ voice bits from D_80075028[0].
+ *        the IRQ voice bits from D_80075028.unk00.
  * @param a0 Pointer to 2-word struct.
  */
 void sndStreamStartPlayback2(s32 *a0) {
     func_8001EDD4(a0[0], a0[1]);
-    D_80075028[0] &= ~g_sndStream.active;
+    D_80075028.unk00 &= ~g_sndStream.active;
 }
 
 /**
