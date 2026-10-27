@@ -1001,8 +1001,8 @@ extern u8 D_800DE8D9;       /**< Mirror of @c EventHeader.field0. */
 extern u8 D_800DE8DA;       /**< Mirror of @c EventHeader.field1. */
 extern u8 D_800DE8C0;       /**< Mirror of @c EventHeader.field3. */
 extern u16 *D_800DE4E0;     /**< Pointer to script bytecode start (header base + 8); read as packed u16s. */
-extern u8 *D_800DE4E4;      /**< Pointer to first sub-table (header base + offset4). */
-extern u8 *D_800DE4E8;      /**< Pointer to second sub-table (header base + offset6). */
+extern u16 *D_800DE4E4;      /**< Pointer to first sub-table (header base + offset4). */
+extern u32 *D_800DE4E8;      /**< Pointer to second sub-table (header base + offset6). */
 
 /* ======================================================================== */
 /* Field-side scalars consumed by fe_object6 (SFX / camera / GF opcodes)    */
