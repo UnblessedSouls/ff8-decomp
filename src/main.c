@@ -22,24 +22,11 @@
 #include "psxsdk/libetc.h"
 #include "main.h"
 #include "btl_transition.h"
+#include "wm2field.h"
 
 /** @brief Global field ids of the maps a new game and a game over go to. */
 #define FIELD_ID_START0 74 /**< start0, the first map of a new game. */
 #define FIELD_ID_GOVER 75 /**< gover, the game-over map. */
-
-/** @brief A world-map entrance: the field it leads to and where the party appears there. */
-typedef struct {
-    /* 0x00 */ u16 position_x;
-    /* 0x02 */ u16 position_y;
-    /* 0x04 */ u16 spawnTriIdx;  /**< Navmesh triangle, copied to @c SystemState::spawnTriIdx. */
-    /* 0x06 */ s16 fieldId;      /**< Global id of the destination field. */
-    /* 0x08 */ u8  anim_state;
-    /* 0x09 */ u8  pad09[0xF];
-} WorldEntrance; /* 0x18 */
-
-/** @brief The 72 entrances of data/eng/wm2field.tbl, loaded here at boot. */
-#define WORLD_ENTRANCES ((WorldEntrance *)0x80097940)
-
 
 /** @brief Turn the GPU's mask-bit setting off with one packet, and wait until the GPU is idle. */
 void flushGpuOt(void) {
@@ -173,7 +160,7 @@ void RestoreSnapshot(void) {
     entity->position_x = g_gameState.cameraSnapshot.positionsX[0];
     entity->position_y = g_gameState.cameraSnapshot.positionsY[0];
     entity->spawnTriIdx = g_gameState.cameraSnapshot.triIdxs[0];
-    entity->anim_state = g_gameState.cameraSnapshot.animStates[0];
+    entity->facingDirection = g_gameState.cameraSnapshot.animStates[0];
 
     D_8005F151 = g_gameState.cameraSnapshot.fade1;
     D_8005F150 = g_gameState.cameraSnapshot.fade0;
@@ -207,15 +194,9 @@ void loadFieldDataB(void) {
     func_8001F5C8();
 }
 
-/** @brief Loads a secondary data block from CD.
- *
- *  @note Purpose uncertain - possibly a secondary asset table used during
- *        initialization.
- */
-void loadSecondaryData(void) {
-    cdRead(D_80097410[1].sector, D_80097410[1].size, 0x80097940, 0);
-    while (func_800393C8() != 0)
-        ;
+void LoadWm2FieldTable(void) {
+    cdRead(D_80097410[1].sector, D_80097410[1].size, WORLD_TO_FIELD_ENTRANCES, NULL);
+    while (func_800393C8() != 0) {}
 }
 
 /** @brief Initializes the sound engine and loads its audio assets (sound bank
@@ -323,7 +304,7 @@ void loadFileTable(void) {
  * without that call. */
 void ff8main(void) __asm__("main");
 void ff8main(void) {
-    WorldEntrance *entry;
+    WorldToFieldEntrance *entry;
     s16 i;
     s16 mode;
     s16 fieldId;
@@ -337,7 +318,7 @@ void ff8main(void) {
     loadCdOverlay();
     func_80098000();
     initFieldModule();
-    loadSecondaryData();
+    LoadWm2FieldTable();
     while (1) {
         func_80038868(D_80097400[1].sector, D_80097400[1].size, 0x80098000, 0);
         while (func_800393C8() != 0) {}
@@ -371,7 +352,7 @@ void ff8main(void) {
 
             func_80098FD4(1);
             loadFileTable();
-            loadSecondaryData();
+            LoadWm2FieldTable();
         }
         do {
             mode = g_vsyncRate - 1;
@@ -414,13 +395,13 @@ void ff8main(void) {
                 D_8005F14C = 2;
                 switch (D_80082C8C.mode) {
                 case 1:
-                    entry = &WORLD_ENTRANCES[D_80082C8C.unk02];
+                    entry = &WORLD_TO_FIELD_ENTRANCES[D_80082C8C.param.entrance.entranceIndex];
                     fieldId = entry->fieldId;
                     g_fieldEntity.position_x = entry->position_x;
                     g_fieldEntity.position_y = entry->position_y;
                     g_fieldEntity.spawnTriIdx = entry->spawnTriIdx;
                     g_curFieldId = fieldId;
-                    g_fieldEntity.anim_state = entry->anim_state;
+                    g_fieldEntity.facingDirection = entry->facingDirection;
                     g_vsyncRate = 1;
                     sndCmd21(-1, 0);
                     break;
@@ -443,7 +424,7 @@ void ff8main(void) {
                     g_battleConfig.battleSceneId = g_fieldEntity.counter;
                     mapAddr = D_8005F13C;
                 } else {
-                    g_battleConfig.battleSceneId = ((u8) D_80082C8C.unk02) | (((u8) D_80082C8C.unk03) << 8);
+                    g_battleConfig.battleSceneId = D_80082C8C.param.battle.sceneLow | (D_80082C8C.param.battle.sceneHigh << 8);
                     mapAddr = 0x801D0000;
                 }
                 func_80038030(mapAddr);
@@ -573,7 +554,7 @@ void ff8main(void) {
                 mode = g_fieldEntity.unk1A0;
                 if (mode == 1) {
                     loadFileTable();
-                    loadSecondaryData();
+                    LoadWm2FieldTable();
                     D_8005F14C = 0;
                     g_vsyncRate = mode;
                     g_curFieldId = g_fieldEntity.counter;

@@ -707,6 +707,8 @@ binaries:
     - [0x3E024, c, psxsdk/libcard]
     - [0x3E7F4, c, psxsdk/libsnd]
     - [0x41EE8, data]
+    - [0x88140, .data, wm2field]
+    - [0x88800, data]
   - [0x191000]
 - name: movie
   sha1: 80ad32679374e6fd7d7360fd50ff8aba066bf0c7

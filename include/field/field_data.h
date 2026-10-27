@@ -29,7 +29,7 @@ typedef struct {
     /* 0x12 */ u16 fieldId;     /**< Destination field, copied to @c g_fieldEntity.counter;
                                      @c FIELD_GATEWAY_UNUSED in an unused slot. */
     /* 0x14 */ u8 pad14[0x08];
-    /* 0x1C */ u8 anim_state;   /**< Copied to @c g_fieldEntity.anim_state (low byte). */
+    /* 0x1C */ u8 facingDirection;
     /* 0x1D */ u8 pad1D[0x03];
 } FieldGateway; /* 0x20 = 32 bytes */
 

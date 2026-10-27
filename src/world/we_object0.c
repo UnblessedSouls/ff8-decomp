@@ -170,7 +170,7 @@ s32 func_800987D8(void)
         func_8009A954();
         func_800AD698(&D_80082C8C, D_800D23D8);
         func_80099C84();
-        func_800B7240(D_80082C8C.unk02);
+        func_800B7240(D_80082C8C.param.entrance.entranceIndex);
         func_800AEEB0(D_800D23D8, D_800D2290, D_800D2130, D_800C9FF0);
         func_800A581C();
         loadImageScript(D_800C9FEC);
@@ -285,8 +285,8 @@ s32 func_800987D8(void)
             }
             if (code >= 0) {
                 D_80082C8C.mode = 1;
-                D_80082C8C.unk02 = code;
-                D_80082C8C.unk03 = -1;
+                D_80082C8C.param.entrance.entranceIndex = code;
+                D_80082C8C.param.entrance.facingDirection = -1;
                 D_80082C8C.cmd = D_800C4D38;
                 func_800B3FD4(D_800D226C, 1);
                 D_800C987C = 0;

@@ -760,8 +760,8 @@ void func_8009C294(s32 cmd) {
         D_800D226C->unk6C = (D_800D226C->unk6C & ~0x100) | ((D_800C4D64->flag << 5) & 0x100);
     }
     D_80082C8C.mode = 1;
-    D_80082C8C.unk02 = cmd;
-    D_80082C8C.unk03 = -1;
+    D_80082C8C.param.entrance.entranceIndex = cmd;
+    D_80082C8C.param.entrance.facingDirection = -1;
     D_80082C8C.cmd = D_800C4D38;
     func_800B3FD4(D_800D226C, 1);
     D_800D226C->bytes[1] = 0;
@@ -1218,7 +1218,7 @@ loop:
         goto done;
     }
     id = p[ID_OFFSET];
-    cdRead(section->baseLba + id, CD_SECTOR_SIZE, (p != first) ? dest1 : dest0, 0);
+    cdRead(section->baseLba + id, CD_SECTOR_SIZE, (p == first) ? dest0 : dest1, NULL);
     while (func_800393C8()) {
         ;
     }

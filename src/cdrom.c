@@ -248,7 +248,7 @@ s32 func_800387F8(s32 lba, void (*callback)(void)) {
  * @param callback  Completion callback (may be NULL).
  * @return Always 0.
  */
-s32 cdRead(s32 lba, u32 size, u8 *dest, void (*callback)(void)) {
+s32 cdRead(s32 lba, u32 size, void *dest, void (*callback)(void)) {
     func_80038760(3, lba, size, dest, callback);
     return 0;
 }

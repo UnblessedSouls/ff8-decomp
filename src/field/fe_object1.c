@@ -474,9 +474,9 @@ void func_8009895C(void) {
             g_fieldEntity.mode = 0;
             g_vsyncRate = 2;
             g_fieldEntity.field_0x120 = g_curFieldId;
-            D_80082C8C.unk02 = g_fieldEntity.counter;
+            D_80082C8C.param.entrance.entranceIndex = g_fieldEntity.counter;
             D_80082C8C.cmd = g_fieldEntity.spawnTriIdx;
-            D_80082C8C.unk03 = g_fieldEntity.anim_state;
+            D_80082C8C.param.entrance.facingDirection = g_fieldEntity.facingDirection;
             sndCmd21(-1, 0);
             break;
         }
@@ -691,7 +691,7 @@ void func_80099348(void) {
             g_fieldEntity.position_x = D_80085224[D_8005F148].posX / 4096;
             g_fieldEntity.position_y = D_80085224[D_8005F148].posY / 4096;
             g_fieldEntity.spawnTriIdx = D_80085224[D_8005F148].triIdx;
-            g_fieldEntity.anim_state = D_80085224[D_8005F148].field_0x241;
+            g_fieldEntity.facingDirection = D_80085224[D_8005F148].field_0x241;
             func_800A59D0();
             break;
         }
@@ -1239,7 +1239,7 @@ void func_8009A920(Actor *actor, Eline *entities) {
  *        field loop leaves for that field.
  *
  * Copies the destination field id, arrival position, arrival triangle and
- * @c anim_state into @c g_fieldEntity, and picks the engine @c mode from the
+ * @c facingDirection into @c g_fieldEntity, and picks the engine @c mode from the
  * field id: below 72 selects mode 7, anything else mode 1.
  */
 void func_8009AA64(FieldGateway *e) {
@@ -1252,7 +1252,7 @@ void func_8009AA64(FieldGateway *e) {
     g_fieldEntity.position_x = e->position_x;
     g_fieldEntity.position_y = e->position_y;
     g_fieldEntity.spawnTriIdx = e->spawnTriIdx;
-    g_fieldEntity.anim_state = e->anim_state;
+    g_fieldEntity.facingDirection = e->facingDirection;
 }
 
 /**

@@ -63,7 +63,7 @@ extern u8  D_800853B8[];        /**< CD read staging buffer. */
 extern s32 cdReadAsyncSync(s32 lba, u32 size, u8 *dest, void (*callback)(void));
 
 /** @brief Initiate an asynchronous CD read with a completion callback. */
-extern s32 cdRead(s32 lba, u32 size, u8 *dest, void (*callback)(void));
+extern s32 cdRead(s32 lba, u32 size, void *dest, void (*callback)(void));
 
 /** @brief Lower-level async CD read used by @ref cdRead. */
 extern s32 func_80038868(s32 lba, u32 size, u8 *dest, void (*callback)(void));
