@@ -2,15 +2,13 @@
 #include "psxsdk/libspu.h"
 #include "sound.h"
 #include "snd_param.h"
+#include "snd_bank.h"
 
 extern s32 D_80075028;
 extern u16 D_80073E62;
 extern s32 D_80077284;
 extern u16 D_80073E60;
 extern s32 D_80077280;
-extern u8 D_80070D60[];
-extern s32 D_80073CA8;
-extern u8 *D_80073C34;
 extern s32 D_8007728C;
 extern s32 D_800772A4;
 extern s32 D_800772F4;
@@ -52,7 +50,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_param", func_80019A94);
  */
 void sndTransferData(void) {
     func_80017410(g_sndSeqState, D_80070D60, 0);
-    if (D_80073CA8 != 0) {
+    if (D_80073CA8 != NULL) {
         func_80017410(D_80073CA8, D_80073C34, 0);
     }
 }
@@ -67,7 +65,7 @@ void sndTransferData(void) {
  */
 void sndTransferDataWithMode(s32 *a0) {
     func_80017410(g_sndSeqState, D_80070D60, *a0);
-    if (D_80073CA8 != 0 && *a0 != 0) {
+    if (D_80073CA8 != NULL && *a0 != 0) {
         func_80017410(D_80073CA8, D_80073C34, *a0);
     }
 }
@@ -93,7 +91,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_param", func_80019BC0);
 void sndStartPlaybackMode1(void) {
     D_8007728C = 1;
     func_80017D14(g_sndSeqState, D_80070D60);
-    if (D_80073CA8 != 0) {
+    if (D_80073CA8 != NULL) {
         func_80017D14(D_80073CA8, D_80073C34);
     }
     func_80017D5C();
@@ -108,7 +106,7 @@ void sndStartPlaybackMode1(void) {
 void sndStartPlaybackMode2(void) {
     D_8007728C = 2;
     func_80017D14(g_sndSeqState, D_80070D60);
-    if (D_80073CA8 != 0) {
+    if (D_80073CA8 != NULL) {
         func_80017D14(D_80073CA8, D_80073C34);
     }
     func_80017D5C();
@@ -136,7 +134,7 @@ void sndSetTempoAllTracks(s32 *a0) {
 
 /** @brief Copies halfword from a0 to offset 0x60 in struct pointed to by g_sndSeqState. */
 void sndSetSequenceOffset(u16 *a0) {
-    g_sndSeqState->voiceActive = *a0;
+    g_sndSeqState->unk60 = *a0;
 }
 
 /**
@@ -152,10 +150,10 @@ void func_80019DB0(void) {
     s32 unusedMask;
     s32 bit;
     s32 voice;
-    SoundSeqTrack *ptr;
+    SoundMusicConfig *ptr;
     s32 tmp;
 
-    if (g_sndSeqState->instParams != 0) {
+    if (g_sndSeqState->unk04 != 0) {
         unusedMask = ~(D_80075028 | D_800772A4) & 0xFFFFFF;
         if (unusedMask != 0) {
             bit = 1;
@@ -173,9 +171,9 @@ void func_80019DB0(void) {
             } while (unusedMask != 0);
         }
         ptr = g_sndSeqState;
-        tmp = ptr->instParams;
-        ptr->instParams = 0;
-        ptr->keyOnPending = tmp;
+        tmp = ptr->unk04;
+        ptr->unk04 = 0;
+        ptr->unk1C = tmp;
     }
     D_800772F4 |= 1;
 }

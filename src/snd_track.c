@@ -2,6 +2,8 @@
 #include "psxsdk/libspu.h"
 #include "sound.h"
 #include "snd_track.h"
+#include "snd_bank.h"
+#include "snd_note.h"
 
 extern s32 D_80075028[];
 extern s32 D_80077288[];
@@ -122,12 +124,12 @@ INCLUDE_ASM("asm/nonmatchings/snd_track", func_8001C2C8);
  */
 void sndTrackReadTempo(SoundSeqTrack *track) {
     s32 byte0 = *(u8 *)(*(s32 *)track) << 16;
-    SoundSeqTrack *bank = g_sndSeqState;
-    bank->tempoRaw = byte0;
+    SoundMusicConfig *bank = g_sndSeqState;
+    bank->unk20 = byte0;
     byte0 |= *(u8 *)(*(s32 *)track + 1) << 24;
-    bank->tempoRaw = byte0;
+    bank->unk20 = byte0;
     *(s32 *)track = *(s32 *)track + 2;
-    bank->field5C = 0;
+    bank->unk5C = 0;
 }
 
 INCLUDE_ASM("asm/nonmatchings/snd_track", func_8001C3E8);
@@ -166,12 +168,12 @@ void sndTrackBranch(SoundSeqTrack *track) {
  * @param a0 Pointer to the stream state (cursor at +0x00).
  */
 void func_8001C604(SoundSeqTrack *track) {
-    SoundSeqTrack *bank = g_sndSeqState;
+    SoundMusicConfig *bank = g_sndSeqState;
     u8 *ptr = *(u8 **)track;
     s32 val = *ptr;
     ptr++;
     *(u8 **)track = ptr;
-    if (!(bank->voiceActive < val)) {
+    if (!(bank->unk60 < val)) {
         s32 offset = (s16)(ptr[0] | (ptr[1] << 8));
         *(u8 **)track = ptr + offset;
     } else {
@@ -324,7 +326,7 @@ void sndTrackReadInstrumentTransposed(SoundSeqTrack *track) {
     *(u8 **)track = ptr + 1;
 
     if (track->voiceActive == 0) {
-        inst = sndAdjustNoteOctave(g_sndSeqState->field00, byte);
+        inst = sndAdjustNoteOctave(g_sndSeqState->unk00, byte);
     } else {
         inst = sndTrackTransposePercussion(track->bankPtr, byte);
     }
@@ -344,12 +346,12 @@ void sndTrackReadInstrumentTransposed(SoundSeqTrack *track) {
  * @param a0 Pointer to the track structure.
  */
 void sndTrackReadInstrument(SoundSeqTrack *track) {
-    SoundSeqTrack *bankPtr = g_sndSeqState;
+    SoundMusicConfig *bankPtr = g_sndSeqState;
     u8 *ptr = *(u8 **)track;
     s32 byte = *ptr;
     s32 inst;
     *(u8 **)track = ptr + 1;
-    inst = sndAdjustNoteOctave(bankPtr->field00, byte);
+    inst = sndAdjustNoteOctave(bankPtr->unk00, byte);
     sndTrackSetInstrumentParams(track, &D_80073E68[inst], 0x1010);
     track->instrument = inst;
     track->instOverride = 0;
@@ -526,8 +528,8 @@ void sndTrackStopPanLfo(SoundSeqTrack *track) {
  */
 void sndTrackEnableNoise(s32 *a0, s32 a1) {
     if (((SoundSeqTrack *)a0)->voiceActive == 0) {
-        SoundSeqTrack *p = g_sndSeqState;
-        p->loopLimit = p->loopLimit | a1;
+        SoundMusicConfig *p = g_sndSeqState;
+        p->unk3C = p->unk3C | a1;
     } else {
         D_80075028[0x1C / 4] = D_80075028[0x1C / 4] | a1;
     }
@@ -546,8 +548,8 @@ void sndTrackEnableNoise(s32 *a0, s32 a1) {
  */
 void sndTrackDisableNoise(s32 *a0, s32 a1) {
     if (((SoundSeqTrack *)a0)->voiceActive == 0) {
-        SoundSeqTrack *p = g_sndSeqState;
-        p->loopLimit = p->loopLimit & ~a1;
+        SoundMusicConfig *p = g_sndSeqState;
+        p->unk3C = p->unk3C & ~a1;
     } else {
         D_80075028[0x1C / 4] = D_80075028[0x1C / 4] & ~a1;
     }
@@ -567,8 +569,8 @@ void sndTrackDisableNoise(s32 *a0, s32 a1) {
  */
 void sndTrackEnableReverb(s32 *a0, s32 a1) {
     if (((SoundSeqTrack *)a0)->voiceActive == 0) {
-        SoundSeqTrack *p = g_sndSeqState;
-        p->panShifted = p->panShifted | a1;
+        SoundMusicConfig *p = g_sndSeqState;
+        p->unk44 = p->unk44 | a1;
     } else if (((SoundSeqTrack *)a0)->flags & 0x10000) {
         D_80075028[0x24 / 4] = D_80075028[0x24 / 4] | a1;
     }
@@ -587,8 +589,8 @@ void sndTrackEnableReverb(s32 *a0, s32 a1) {
  */
 void sndTrackDisableReverb(s32 *a0, s32 a1) {
     if (((SoundSeqTrack *)a0)->voiceActive == 0) {
-        SoundSeqTrack *p = g_sndSeqState;
-        p->panShifted = p->panShifted & ~a1;
+        SoundMusicConfig *p = g_sndSeqState;
+        p->unk44 = p->unk44 & ~a1;
     } else {
         D_80075028[0x24 / 4] = D_80075028[0x24 / 4] & ~a1;
     }
@@ -608,8 +610,8 @@ void sndTrackDisableReverb(s32 *a0, s32 a1) {
  */
 void sndTrackEnablePitchMod(s32 *a0, s32 a1) {
     if (((SoundSeqTrack *)a0)->voiceActive == 0) {
-        SoundSeqTrack *p = g_sndSeqState;
-        p->panRaw = p->panRaw | a1;
+        SoundMusicConfig *p = g_sndSeqState;
+        p->unk40 = p->unk40 | a1;
     } else {
         D_80075028[0x20 / 4] = D_80075028[0x20 / 4] | a1;
     }
@@ -628,8 +630,8 @@ void sndTrackEnablePitchMod(s32 *a0, s32 a1) {
  */
 void func_8001D484(s32 *a0, s32 a1) {
     if (((SoundSeqTrack *)a0)->voiceActive == 0) {
-        SoundSeqTrack *p = g_sndSeqState;
-        p->panRaw = p->panRaw & ~a1;
+        SoundMusicConfig *p = g_sndSeqState;
+        p->unk40 = p->unk40 & ~a1;
     } else {
         D_80075028[0x20 / 4] = D_80075028[0x20 / 4] & ~a1;
     }
@@ -889,7 +891,7 @@ void sndTrackAdjustVolume(SoundSeqTrack *track) {
  * @param a0 Pointer to stream state.
  */
 void sndTrackCheckBankFlags(SoundSeqTrack *track) {
-    s32 check = g_sndSeqState->bankPtr;
+    s32 check = g_sndSeqState->unk34;
     if (check != 0) {
         track->flags = (track->flags & (s32)0xE6FFEFF7) | 8;
     }
@@ -1129,7 +1131,7 @@ void sndTrackReadBankAddress(SoundSeqTrack *track) {
     u8 *ptr = *(u8 **)track;
     s32 val = *ptr;
     *(u8 **)track = ptr + 1;
-    g_sndSeqState->keyOffMask = val + (s32)&D_80051824;
+    g_sndSeqState->unk38 = val + (s32)&D_80051824;
 }
 
 /** @brief ORs a1 into the word at g_sndSeqState+0x8 (set flags).
@@ -1137,7 +1139,7 @@ void sndTrackReadBankAddress(SoundSeqTrack *track) {
  *  @param a1 Bits to set.
  */
 void sndTrackSetBankFlags(s32 a0, s32 a1) {
-    g_sndSeqState->field08 |= a1;
+    g_sndSeqState->unk08 |= a1;
 }
 
 /** @brief ANDs ~a1 into the word at g_sndSeqState+0x8 (clear flags).
@@ -1145,7 +1147,7 @@ void sndTrackSetBankFlags(s32 a0, s32 a1) {
  *  @param a1 Bits to clear.
  */
 void sndTrackClearBankFlags(s32 a0, s32 a1) {
-    g_sndSeqState->field08 &= ~a1;
+    g_sndSeqState->unk08 &= ~a1;
 }
 
 /** @brief Calls func_8001C2C8. */

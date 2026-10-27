@@ -25,7 +25,6 @@ extern u8   D_800516B8[];
 extern CdlATV g_cdMixVolume;
 extern u8   D_80073C38[];
 extern s32  D_80073C58;
-extern s32 *D_80073CA8;
 extern s32  D_80073DE0[];
 extern s16  D_80073E60;
 extern s16  D_80073E62;

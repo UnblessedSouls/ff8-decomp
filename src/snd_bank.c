@@ -1,10 +1,10 @@
 #include "common.h"
 #include "sound.h"
+#include "snd_bank.h"
+#include "snd_note.h"
+#include "snd_track.h"
 
 extern s32 D_80074EB8[];
-extern u8 D_80070D60[];
-extern s32 D_80073CA8;
-extern u8 *D_80073C34;
 extern s32 D_80074EB0;
 extern VoicePoolEntry D_80074F20[12];
 extern u16 D_80074FE4;
@@ -169,15 +169,15 @@ void sndReleaseVoiceFromTracks(s32 voiceId) {
     s32 i;
     SoundSeqTrack *track;
 
-    track = (SoundSeqTrack *)D_80070D60;
+    track = D_80070D60;
     for (i = 32; i != 0; i--) {
         if (track->voiceMask == voiceId)
             track->voiceMask = 0x18;
         track++;
     }
 
-    if (D_80073CA8 != 0) {
-        track = (SoundSeqTrack *)D_80073C34;
+    if (D_80073CA8 != NULL) {
+        track = D_80073C34;
         for (i = 32; i != 0; i--) {
             if (track->voiceMask == voiceId)
                 track->voiceMask = 0x18;
@@ -202,8 +202,8 @@ INCLUDE_ASM("asm/nonmatchings/snd_bank", func_80017AAC);
  */
 INCLUDE_ASM("asm/nonmatchings/snd_bank", func_80017C9C);
 
-void func_80017D14(SoundSeqTrack *seq, s32 *tracks) {
-    s32 value = seq->instParams;
+void func_80017D14(SoundMusicConfig *seq, SoundSeqTrack *tracks) {
+    s32 value = seq->unk04;
     s32 mask;
     s32 bit;
     s32 *flags;
@@ -282,7 +282,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_bank", func_80018158);
 void sndConfigureTrackPlayback(s32 *a0) {
     s32 val, result;
     func_8001708C(a0[0], a0[3]);
-    g_sndSeqState->field5E = *(u16 *)((u8 *)a0 + 8);
+    g_sndSeqState->unk5E = *(u16 *)((u8 *)a0 + 8);
     result = 0;
     /* The val load is block-extracted so result binds to $a0: a plain
        `val = a0[4];` here schedules result into $v1 and mismatches. */

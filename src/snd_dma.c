@@ -2,6 +2,7 @@
 #include "psxsdk/libspu.h"
 #include "sound.h"
 #include "snd_dma.h"
+#include "snd_note.h"
 
 extern volatile s32 D_80074ED4;
 extern u8 D_80074E88[];

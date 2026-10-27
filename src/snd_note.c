@@ -1,5 +1,7 @@
 #include "common.h"
 #include "sound.h"
+#include "snd_note.h"
+#include "snd_bank.h"
 
 extern s16 D_8007507A;
 /**
@@ -30,20 +32,19 @@ typedef struct {
 } UnkStruct80074F10;
 
 extern UnkStruct80074F10 D_80074F10;
-extern void func_80017D14(SoundSeqTrack *seq, s32 *tracks);
 
-void func_8001ACCC(SoundSeqTrack *track, s32 *tracks) {
+void func_8001ACCC(SoundMusicConfig *track, SoundSeqTrack *tracks) {
     s32 savedUnk04;
     s32 newVal;
 
     if (D_80074F10.unk08 != 0) {
         if (--D_80074F10.unk08 == 0) {
-            savedUnk04 = track->instParams;
-            track->field5E = 0;
-            track->instParams = 0;
-            track->voiceIdx = 0;
-            track->field14 = 0;
-            track->field18 = savedUnk04;
+            savedUnk04 = track->unk04;
+            track->unk5E = 0;
+            track->unk04 = 0;
+            track->unk10 = 0;
+            track->unk14 = 0;
+            track->unk18 = savedUnk04;
         } else {
             newVal = D_80074F10.unk00 + D_80074F10.unk04;
 

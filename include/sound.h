@@ -171,13 +171,48 @@ typedef struct {
     /* 0x0C */ s32 fieldC;        /**< Passed as the 3rd arg to @c sndPlay*. */
 } VoicePoolEntry; /* 16 bytes */
 
-/**
- * @brief Pointer to the active sound-engine state / primary sequence track.
- *
- * Paired with the @c D_80070D60 track array as the primary sound source
- * (see @c sndTransferData).
- */
-extern SoundSeqTrack *g_sndSeqState;
+typedef struct {
+    /* 0x00 */ s32 unk00;
+    /* 0x04 */ u32 unk04;
+    /* 0x08 */ u32 unk08;
+    /* 0x0C */ u32 unk0C;
+    /* 0x10 */ u32 unk10;
+    /* 0x14 */ u32 unk14;
+    /* 0x18 */ u32 unk18;
+    /* 0x1C */ u32 unk1C;
+    /* 0x20 */ s32 unk20;
+    /* 0x24 */ s32 unk24;
+    /* 0x28 */ s32 unk28;
+    /* 0x2C */ s32 unk2C;
+    /* 0x30 */ s32 unk30;
+    /* 0x34 */ s32 unk34;
+    /* 0x38 */ s32 unk38;
+    /* 0x3C */ u32 unk3C;
+    /* 0x40 */ u32 unk40;
+    /* 0x44 */ u32 unk44;
+    /* 0x48 */ s32 unk48;
+    /* 0x4C */ s32 unk4C;
+    /* 0x50 */ s32 unk50;
+    /* 0x54 */ s32 unk54;
+    /* 0x58 */ s16 unk58;
+    /* 0x5A */ s16 unk5A;
+    /* 0x5C */ u16 unk5C;
+    /* 0x5E */ u16 unk5E;
+    /* 0x60 */ u16 unk60;
+    /* 0x62 */ u16 unk62;
+    /* 0x64 */ u16 unk64;
+    /* 0x66 */ u16 unk66;
+    /* 0x68 */ u16 unk68;
+    /* 0x6A */ u16 unk6A;
+    /* 0x6C */ u16 unk6C;
+    /* 0x6E */ u16 unk6E;
+    /* 0x70 */ u8 unk70[16];
+} SoundMusicConfig;
+
+extern SoundMusicConfig *g_sndSeqState;
+extern SoundMusicConfig *D_80073CA8;
+extern SoundSeqTrack D_80070D60[];
+extern SoundSeqTrack *D_80073C34;
 
 /** @brief 12-entry SFX play queue, replayed by @c func_800BF718 after a sound reset. */
 extern VoicePoolEntry D_80074F20[12];
@@ -286,6 +321,3 @@ extern u32 D_800772B8;
 
 
 #endif /* SOUND_H */
-
-/** @brief snd_note DMA-completion callback; its address is handed to OpenEvent by snd_dma.c. */
-void func_8001AD60(void);
