@@ -2,6 +2,8 @@
 #include "menu.h"
 #include "menutest.h"
 #include "gamestate.h"
+#include "psxsdk/libgte.h"
+
 /**
  * @brief Test menu task state, allocated by func_801F179C.
  *
@@ -190,10 +192,10 @@ INCLUDE_ASM("asm/ovl/menutest/nonmatchings/menutest", func_801E5D74);
  * Sets up a GPU frame with centered text display for the header area.
  * Measures text width via measureMessage, centers it within 0xF4 pixels,
  * draws via drawMessageText, configures g_menuDisplayCfg display struct
- * (0x18, 0x6, 0xF4, 0x16), and submits via func_801EF9AC.
+ * (0x18, 0x6, 0xF4, 0x16), and submits via DrawMenuWindow.
  * @param a0 Display list pointer
  * @param a1 OT pointer
- * @return Result of func_801EF9AC
+ * @return Result of DrawMenuWindow
  */
 s32 func_801E64B4(s32 a0, s32 a1) {
     s32 disp = a0;
@@ -212,7 +214,7 @@ s32 func_801E64B4(s32 a0, s32 a1) {
     g_menuDisplayCfg.y = 6;
     g_menuDisplayCfg.w = maxW;
     g_menuDisplayCfg.h = 0x16;
-    return func_801EF9AC(disp, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -221,11 +223,11 @@ s32 func_801E64B4(s32 a0, s32 a1) {
  * func_801E582C), draws text at the scroll-adjusted X position via drawMessageText,
  * then configures two g_menuDisplayCfg display regions:
  * first (0x1C, 0x21, 0x148, 0x9F) submitted via func_801EF800,
- * second (0x18, 0x1D, 0x150, 0xA7) submitted via func_801EF9AC.
+ * second (0x18, 0x1D, 0x150, 0xA7) submitted via DrawMenuWindow.
  * @param state Test menu state.
  * @param a1 Display list pointer
  * @param a2 OT pointer
- * @return Result of func_801EF9AC
+ * @return Result of DrawMenuWindow
  */
 s32 func_801E6570(TestMenuState *state, s32 a1, s32 a2) {
     s32 disp = a1;
@@ -256,18 +258,18 @@ s32 func_801E6570(TestMenuState *state, s32 a1, s32 a2) {
     cfg->y = 0x1D;
     cfg->w = 0x150;
     cfg->h = 0xA7;
-    return func_801EF9AC(disp, v0, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, v0, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
  * Sets up GPU display for a secondary text area, similar to func_801E64B4.
  * Centers @c state->text within 0x150 pixels, draws via drawMessageText
  * at Y=0xC8, configures g_menuDisplayCfg (0x18, 0xC4, 0x150, 0x14), and submits
- * via func_801EF9AC.
+ * via DrawMenuWindow.
  * @param state Test menu state.
  * @param a1 Display list pointer
  * @param a2 OT pointer
- * @return Result of func_801EF9AC
+ * @return Result of DrawMenuWindow
  */
 s32 func_801E66A8(TestMenuState *state, s32 a1, s32 a2) {
     s32 disp = a1;
@@ -284,7 +286,7 @@ s32 func_801E66A8(TestMenuState *state, s32 a1, s32 a2) {
     g_menuDisplayCfg.y = 0xC4;
     g_menuDisplayCfg.w = maxW;
     g_menuDisplayCfg.h = 0x14;
-    return func_801EF9AC(disp, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

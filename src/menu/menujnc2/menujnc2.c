@@ -3231,7 +3231,7 @@ s32 renderStatTableA(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x59;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3314,7 +3314,7 @@ s32 renderStatTableB(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x60;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3419,7 +3419,7 @@ s32 renderStatTableC(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase, s32 junct
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x43;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3516,7 +3516,7 @@ s32 renderStatTableD(s32 renderCtx, s32 cursorY, s32 xBase, s32 yBase) {
     cfg->y = yBase;
     cfg->w = 0xDA;
     cfg->h = 0x43;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3569,7 +3569,7 @@ s32 renderStatGrid(s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = 0x150;
     cfg->y = y;
     cfg->h = 0xA0;
-    return func_801EF9AC(ctx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ctx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3639,7 +3639,7 @@ s32 renderStatDeltaBar(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     cfg->y = y;
     cfg->w = 244;
     cfg->h = h;
-    return func_801EF9AC(renderCtx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, result, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3711,7 +3711,7 @@ s32 renderStatDeltaBarExt(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 
     g_menuDisplayCfg.w = barW;
     g_menuDisplayCfg.h = h;
 
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -3793,7 +3793,7 @@ s32 setupMagicListPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 callbackParam, 
  * character, computes a 2-column grid position, checks GF health via
  * func_801F2240, looks up the magic name, and renders it with the
  * appropriate color. After the loop, sets up g_menuDisplayCfg and
- * calls func_801EF9AC for the panel border.
+ * calls DrawMenuWindow for the panel border.
  *
  * @param ctx Junction menu context.
  * @param renderCtx Render context.
@@ -3849,7 +3849,7 @@ s32 renderGfMagicGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 xBas
     cursorY++;
     cursorY--;
     cfg->h = 0x5E;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4440,13 +4440,13 @@ s32 renderJunctionStatPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s3
  * @brief Configure display panel and invoke rendering callback.
  *
  * Sets up the menu display config with the given position and a fixed
- * size of 0x150 x 0x48, clears icon fields, then calls func_801EF9AC.
+ * size of 0x150 x 0x48, clears icon fields, then calls DrawMenuWindow.
  *
- * @param ctx Render context passed through to func_801EF9AC.
- * @param mode Render mode passed through to func_801EF9AC.
+ * @param ctx Render context passed through to DrawMenuWindow.
+ * @param mode Render mode passed through to DrawMenuWindow.
  * @param x X position for the display panel.
  * @param y Y position for the display panel.
- * @param renderParam Render parameter passed to func_801EF9AC (on stack).
+ * @param renderParam Render parameter passed to DrawMenuWindow (on stack).
  * @return Updated draw cursor.
  */
 s32 setupStatBorderPanel(s32 ctx, s32 mode, s32 x, s32 y, s32 renderParam) {
@@ -4456,7 +4456,7 @@ s32 setupStatBorderPanel(s32 ctx, s32 mode, s32 x, s32 y, s32 renderParam) {
     g_menuDisplayCfg.w = 0x150;
     g_menuDisplayCfg.h = 0x48;
     g_menuDisplayCfg.y = y;
-    return func_801EF9AC(ctx, mode, renderParam, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ctx, mode, renderParam, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4464,7 +4464,7 @@ s32 setupStatBorderPanel(s32 ctx, s32 mode, s32 x, s32 y, s32 renderParam) {
  *
  * Divides ctx->unk58 by 5 to select a category (0-3), calls renderInnerPanel
  * to look up two header strings per category, then renders them with
- * stat icon indicators. Finishes with a bordered panel via func_801EF9AC.
+ * stat icon indicators. Finishes with a bordered panel via DrawMenuWindow.
  *
  * @param ctx Junction menu context.
  * @param renderCtx Render context.
@@ -4519,7 +4519,7 @@ s32 renderJunctionHeader(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x16;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4831,14 +4831,14 @@ s32 renderAbilityListPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32
  * drawn with its category icon (@c getAbilityCategory) and name (@c getAbilityName),
  * highlighted (color 1 instead of 7) when the junction slot being edited — queried
  * per-category via @c func_801F79F8(mask) — matches the command id (0x14-0x18). The
- * surrounding panel is closed via @c func_801EF9AC.
+ * surrounding panel is closed via @c DrawMenuWindow.
  *
  * @param ctx Junction menu context.
  * @param renderCtx Render context.
  * @param cursorY Current display-list cursor.
  * @param x Panel X position.
  * @param y Panel Y position (on stack).
- * @return Updated display-list cursor from @c func_801EF9AC.
+ * @return Updated display-list cursor from @c DrawMenuWindow.
  */
 s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     MenuDisplayConfig *cfg = &g_menuDisplayCfg;
@@ -4899,7 +4899,7 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x48;
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -4910,14 +4910,14 @@ s32 renderStatRowGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, s
  * ability slot draws a category icon (via @c getAbilityCategory) and the
  * ability name (via @c getAbilityName), plus a fixed separator glyph; the
  * running display-list pointer is threaded through @c drawIcon /
- * @c func_801F0FEC and the surrounding panel is closed with @c func_801EF9AC.
+ * @c func_801F0FEC and the surrounding panel is closed with @c DrawMenuWindow.
  *
  * @param ctx       Junction menu context.
  * @param renderCtx Render context.
  * @param cursorY   Current display-list cursor.
  * @param x         Panel X position.
  * @param y         Panel Y position (on stack).
- * @return Updated display-list cursor from @c func_801EF9AC.
+ * @return Updated display-list cursor from @c DrawMenuWindow.
  * @note The @c result++/result-- pair is a no-op that pins the accumulator to
  *       the register the original codegen used; it emits no instructions.
  */
@@ -4954,7 +4954,7 @@ s32 renderGfCompatGrid(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 x, 
     cfg->y = y;
     cfg->w = 0xAE;
     cfg->h = 0x48;
-    return func_801EF9AC(renderCtx, result, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, result, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -5025,7 +5025,7 @@ s32 renderCharSwitchPanel(JunctionMenuCtx *ctx, s32 renderCtx, s32 cursorY, s32 
  *
  * Sets up g_menuDisplayCfg dimensions, optionally renders the character
  * name (looked up via getCharName from the character's ID in g_gameState),
- * then draws a color bar via func_801EF9AC.
+ * then draws a color bar via DrawMenuWindow.
  *
  * @param renderCtx Render context handle.
  * @param cursorY Current Y cursor position.
@@ -5052,7 +5052,7 @@ s32 renderCharNameBar(s32 renderCtx, s32 cursorY, s32 x, s32 height, s32 charIdx
             u8 *namePtr = getCharName(g_gameState.chars[charIdx].characterId);
             cursorY = func_801F0FEC(renderCtx, cursorY, x, height, namePtr, gfInfo);
         }
-        return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+        return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
     } while (0);
 }
 

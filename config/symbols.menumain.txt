@@ -1,6 +1,6 @@
 func_801EF8D8 = 0x801EF8D8; // type:func
 func_801EF934 = 0x801EF934; // type:func
-func_801EF9AC = 0x801EF9AC; // type:func
+DrawMenuWindow = 0x801EF9AC; // type:func
 func_801EFBB4 = 0x801EFBB4; // type:func
 func_801F0038 = 0x801F0038; // type:func
 func_801F00A0 = 0x801F00A0; // type:func

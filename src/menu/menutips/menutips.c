@@ -3,6 +3,7 @@
 #include "menutips.h"
 #include "psxsdk/libgpu.h"
 #include "psxsdk/libetc.h"
+#include "psxsdk/libgte.h"
 
 extern u8 D_801ED430[];
 extern s16 D_801ED630;
@@ -329,7 +330,7 @@ void func_801E64B0(s32 a0) {
  *
  * @param a0 Display list pointer.
  * @param a1 OT pointer.
- * @return Updated OT pointer from func_801EF9AC.
+ * @return Updated OT pointer from DrawMenuWindow.
  */
 s32 func_801E6514(s32 a0, s32 a1) {
     s32 ot = a1;
@@ -365,7 +366,7 @@ s32 func_801E6514(s32 a0, s32 a1) {
     *(s16 *)(cfg + 0x2) = yPos;
     *(s16 *)(cfg + 0x4) = width;
     *(s16 *)(cfg + 0x6) = 0x14;
-    return func_801EF9AC(a0, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(a0, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -374,11 +375,11 @@ s32 func_801E6514(s32 a0, s32 a1) {
  * Saves the current palette context, renders the tips text region via
  * drawMessageText, restores the palette, then configures the g_menuDisplayCfg
  * display panel and calls func_801F5F60 (if either scroll indicator is
- * active) followed by func_801EF9AC to draw the panel.
+ * active) followed by DrawMenuWindow to draw the panel.
  *
  * @param arg0 Display list pointer.
  * @param arg1 OT pointer.
- * @return Updated OT pointer from func_801EF9AC.
+ * @return Updated OT pointer from DrawMenuWindow.
  */
 s32 func_801E6668(s32 arg0, s32 arg1) {
     s32 temp_s0;
@@ -404,7 +405,7 @@ s32 func_801E6668(s32 arg0, s32 arg1) {
     if (var_a3 != 0) {
         var_s1 = func_801F5F60(arg0, var_s1, g_menuTint[MENU_TINT_NORMAL], var_a3);
     }
-    return func_801EF9AC(arg0, var_s1, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(arg0, var_s1, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -412,11 +413,11 @@ s32 func_801E6668(s32 arg0, s32 arg1) {
  *
  * Calls drawMessageText to set up the display region using the D_801E7B10
  * data table, then configures g_menuDisplayCfg with fixed panel dimensions
- * and calls func_801EF9AC to render.
+ * and calls DrawMenuWindow to render.
  *
  * @param a0 Display list pointer.
  * @param a1 OT pointer.
- * @return Updated OT pointer from func_801EF9AC.
+ * @return Updated OT pointer from DrawMenuWindow.
  */
 s32 func_801E6768(s32 a0, s32 a1) {
     u8 *new_var;
@@ -434,7 +435,7 @@ s32 func_801E6768(s32 a0, s32 a1) {
     }
     g_menuDisplayCfg.w = 0xF4;
     g_menuDisplayCfg.h = 0x16;
-    return func_801EF9AC(disp, ot, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(disp, ot, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**

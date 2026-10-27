@@ -211,7 +211,7 @@ void *func_801EF934(void *ot, void *prim, RECT *rect) {
  * @param color Color used to draw the window.
  * @return Pointer to the next available GPU primitive.
  */
-void *func_801EF9AC(void *ot, void *prim, s32 progress, u32 color) {
+void *DrawMenuWindow(void *ot, void *prim, s32 progress, u32 color) {
     IconTable *iconTable = &g_iconTable;
     MenuDisplayConfig *window = &g_menuDisplayCfg;
     progress = abs(progress);
@@ -349,7 +349,7 @@ void *func_801EFBB4(void *ot, void *_prim, MenuRowCallback _drawRowCallback) {
     }
 
     cfg->iconType = 0;
-    prim = func_801EF9AC(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    prim = DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
     cfg->iconType = iconType;
     func_801F0FD0(0, 0);
     return prim;
@@ -1409,7 +1409,7 @@ INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801F3824);
  *
  * Looks up the character name via func_801F6AD0, renders it with
  * func_801F0FEC, configures g_menuDisplayCfg (icon 0x55), and draws
- * the panel border via func_801EF9AC.
+ * the panel border via DrawMenuWindow.
  */
 void func_801F38F8(s32 a0, s32 a1, s32 a2) {
     u8 *ret1;
@@ -1422,7 +1422,7 @@ void func_801F38F8(s32 a0, s32 a1, s32 a2) {
     g_menuDisplayCfg.x = 0x18;
     g_menuDisplayCfg.y = 7;
     *(s32 *)&g_menuDisplayCfg.w = 0x001900F4; /* w=0xF4, h=0x19 packed */
-    func_801EF9AC(a1, ret2, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a1, ret2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /** @brief Render text with explicit parameters (arg-reorder wrapper for func_801F0FEC). */
@@ -1534,7 +1534,7 @@ s32 func_801F486C(u8 *a0, s32 a1) {
  * @brief Draw Gil (money) display panel.
  *
  * Renders the Gil label string, sets up g_menuDisplayCfg rendering params,
- * and draws the panel decoration via func_801EF9AC.
+ * and draws the panel decoration via DrawMenuWindow.
  */
 void func_801F4918(s32 a0, s32 a1, s32 a2) {
     s32 ret;
@@ -1545,7 +1545,7 @@ void func_801F4918(s32 a0, s32 a1, s32 a2) {
     g_menuDisplayCfg.y = 0xBE;
     g_menuDisplayCfg.w = 0xF4;
     g_menuDisplayCfg.h = 0x1A;
-    func_801EF9AC(a1, ret, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(a1, ret, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /* ======================================================================== */
@@ -1826,7 +1826,7 @@ INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801F5A38);
  * Measures every entry of @p ids (looked up in text category @p textCat via
  * func_801F08D4) to find the widest string, then sizes g_menuDisplayCfg to
  * fit — width = 8 pixels per character + 16 padding, height = 12 per row
- * plus 10 — and draws the panel frame with func_801EF9AC.
+ * plus 10 — and draws the panel frame with DrawMenuWindow.
  *
  * @note Declaring @c count before @c maxWidth is load-bearing: the two have
  *       identical allocator priority, so the tie breaks on declaration order.
@@ -1837,7 +1837,7 @@ INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801F5A38);
  * @param y       Panel Y.
  * @param textCat Text category for func_801F08D4 lookups.
  * @param ids     Entry ids, terminated by a negative value.
- * @param param   Intensity/param passed to func_801EF9AC.
+ * @param param   Intensity/param passed to DrawMenuWindow.
  * @return Display-list cursor after the panel.
  */
 s32 func_801F5B54(s32 ctx, s32 dl, s32 x, s32 y, s32 textCat, u16 *ids, s32 param) {
@@ -1872,7 +1872,7 @@ s32 func_801F5B54(s32 ctx, s32 dl, s32 x, s32 y, s32 textCat, u16 *ids, s32 para
     cfg->y = y;
     cfg->w = maxWidth + 0x10;
     cfg->h = count * 12 + 0xA;
-    dl = func_801EF9AC(ctx, dl, param, g_menuTint[MENU_TINT_NORMAL]);
+    dl = DrawMenuWindow(ctx, dl, param, g_menuTint[MENU_TINT_NORMAL]);
     return dl;
 }
 
@@ -2136,7 +2136,7 @@ s32 func_801F65F0(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5) {
  *
  * Anchors g_menuDisplayCfg at (x+200, y+121) with a 154x22 box and no
  * icon, draws the name from getWeaponName(weaponId) at (x+209, y+128)
- * via func_801F0FEC, then draws the panel frame with func_801EF9AC at
+ * via func_801F0FEC, then draws the panel frame with DrawMenuWindow at
  * full intensity.
  *
  * @note @p x and @p y are advanced in place — reassigning the parameters
@@ -2164,7 +2164,7 @@ void func_801F66B0(s32 ctx, s32 dl, s32 x, s32 y, s32 weaponId) {
     y += 7;
     name = getWeaponName(weaponId);
     dl = func_801F0FEC(ctx, dl, x, y, name, 7);
-    func_801EF9AC(ctx, dl, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(ctx, dl, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -2311,13 +2311,13 @@ INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801F6B54);
  * For each set bit i (0..7) of @p mask, renders entry i at (x+8, ty) via
  * func_801F6B54, advancing ty by 13 per drawn row. Then anchors
  * g_menuDisplayCfg at (x, y) with size 168x120 and icon 0x49 and draws the
- * panel frame with func_801EF9AC.
+ * panel frame with DrawMenuWindow.
  *
  * @param ctx  Render context.
  * @param dl   Display-list cursor (threaded through the row calls).
  * @param x    Panel X.
  * @param y    Panel Y.
- * @param a4   Passed to func_801EF9AC (intensity/param).
+ * @param a4   Passed to DrawMenuWindow (intensity/param).
  * @param mask Bitmask of rows to draw, bit index = entry index.
  */
 void *func_801F6C9C(s32 ctx, s32 dl, s32 x, s32 y, s32 a4, u16 mask) {
@@ -2338,7 +2338,7 @@ void *func_801F6C9C(s32 ctx, s32 dl, s32 x, s32 y, s32 a4, u16 mask) {
     cfg->x = x;
     cfg->y = y;
     cfg->h = 0x78;
-    return func_801EF9AC(ctx, dl, a4, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ctx, dl, a4, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menumain/nonmatchings/menumain", func_801F6D88);

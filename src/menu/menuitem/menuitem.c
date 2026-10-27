@@ -3981,7 +3981,7 @@ static void *func_801E8024(ItemMenuState *s, void *ot, void *prim, s32 x, s32 y)
     g_menuDisplayCfg.y = y;
     g_menuDisplayCfg.w = 244;
     g_menuDisplayCfg.h = 18;
-    return func_801EF9AC(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /** @brief Draw the string stored in dataPtr. */
@@ -4053,7 +4053,7 @@ static void *menuitem_drawGfPanel(void *ot, void *prim, s32 x, s32 y, s32 arg4, 
     cfg->y = y;
     cfg->w = 168;
     cfg->h = 120;
-    prim = func_801EF9AC(ot, prim, arg4, g_menuTint[MENU_TINT_NORMAL]);
+    prim = DrawMenuWindow(ot, prim, arg4, g_menuTint[MENU_TINT_NORMAL]);
     return prim;
 }
 
@@ -4741,7 +4741,7 @@ static void *func_801E934C(void *ot, void *prim, s32 x, s32 y, s32 entityId, s32
     cfg->y = y;
     cfg->w = 168;
     cfg->h = 40;
-    return func_801EF9AC(ot, prim, 4096, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(ot, prim, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
