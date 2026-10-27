@@ -273,6 +273,9 @@ extern s32 D_80074F18;
 /** @brief 12-entry SFX play queue, replayed by @c func_800BF718 after a sound reset. */
 extern VoicePoolEntry D_80074F20[12];
 
+extern s16 D_80051854[];
+extern s16 D_80051954;
+
 /**
  * @brief Sound command parameter block.
  */

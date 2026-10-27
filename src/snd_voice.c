@@ -99,11 +99,353 @@ void func_800150A8(s32 a0, SndVoiceParam *a1, s32 a2) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_800151C4);
+void func_800151C4(SoundSeqTrack *track, u32 bit, s32 isSfx) {
+    s32 val;
+    u32 depth;
+    u32 base;
+    s16 *wave;
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80015668);
+    if (track->panFade != 0) {
+        track->panFade--;
+        val = track->panShifted + track->panTarget;
+        if ((val & 0xFFE00000) != (track->panShifted & 0xFFE00000)) {
+            track->unkF4.updateFlags |= 3;
+        }
+        track->panShifted = val;
+    }
+    if (track->notePitchFade != 0) {
+        track->notePitchFade--;
+        val = track->notePitch + track->unkE2;
+        if ((val & 0xFF00) != (track->notePitch & 0xFF00)) {
+            track->unkF4.updateFlags |= 3;
+        }
+        track->notePitch = val;
+    }
+    if (isSfx == 0) {
+        if (track->unk82 != 0) {
+            track->unk82--;
+            val = track->pitchBend + track->unkDA;
+            if ((val & 0x7F00) != (track->pitchBend & 0x7F00)) {
+                track->unkF4.updateFlags |= 3;
+            }
+            track->pitchBend = val;
+        }
+    }
+    if (track->unkA0 != 0) {
+        track->unkA0--;
+    }
+    if (track->unkB4 != 0) {
+        track->unkB4--;
+    }
+    if (track->noiseDuration != 0 && --track->noiseDuration == 0) {
+        if (isSfx == 0) {
+            g_sndSeqState->unk3C ^= bit;
+        } else {
+            D_80075028.unk1C ^= bit;
+        }
+        D_80077288[2] |= 0x110;
+    }
+    if (track->reverbDuration != 0 && --track->reverbDuration == 0) {
+        if (isSfx == 0) {
+            g_sndSeqState->unk44 ^= bit;
+        } else {
+            D_80075028.unk24 ^= bit;
+        }
+        D_80077288[2] |= 0x100;
+    }
+    if (track->delaySendTarget != 0) {
+        track->delaySendTarget--;
+        track->delaySend += track->unkAE;
+        depth = (track->delaySend & 0x7F00) >> 8;
+        if (track->delaySend & 0x8000) {
+            base = (depth * track->loopCounter) >> 7;
+        } else {
+            base = (depth * ((track->loopCounter * 15) >> 8)) >> 7;
+        }
+        track->unkA8 = base;
+        if (track->unkA0 == 0 && track->unkA4 != 1) {
+            wave = track->unk18;
+            if (wave[0] == 0 && wave[1] == 0) {
+                wave += wave[2];
+            }
+            val = (track->unkA8 * wave[0]) >> 16;
+            if (val != track->portamento) {
+                track->portamento = val;
+                track->unkF4.updateFlags |= 0x10;
+                if (val >= 0) {
+                    track->portamento = val * 2;
+                }
+            }
+        }
+    }
+    if (track->volumeLfoTarget != 0) {
+        track->volumeLfoTarget--;
+        track->volumeLfo += track->unkC0;
+        if (track->unkB4 == 0 && track->unkB8 != 1) {
+            s32 vol;
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80015AC8);
+            wave = track->unk1C;
+            if (wave[0] == 0 && wave[1] == 0) {
+                wave += wave[2];
+            }
+            vol = ((s16)(track->panShifted >> 16) * (track->pitchBend >> 8)) >> 7;
+            val = ((vol * (track->volumeLfo >> 8)) << 9) >> 16;
+            val = (val * wave[0]) >> 15;
+            if (val != track->volumeLfoStop) {
+                track->volumeLfoStop = val;
+                track->unkF4.updateFlags |= 3;
+            }
+        }
+    }
+    if (track->panLfoTarget != 0) {
+        track->panLfoTarget--;
+        track->panLfo += track->unkCE;
+        if (track->unkC6 != 1) {
+            wave = track->unk20;
+            if (wave[0] == 0 && wave[1] == 0) {
+                wave += wave[2];
+            }
+            val = ((track->panLfo >> 8) * wave[0]) >> 15;
+            if (val != track->panLfoStop) {
+                track->panLfoStop = val;
+                track->unkF4.updateFlags |= 3;
+            }
+        }
+    }
+    if (track->unk90 != 0) {
+        track->unk90--;
+        val = track->cmdDataPtr + track->unk4C;
+        if ((val & 0xFFFF0000) != (track->cmdDataPtr & 0xFFFF0000)) {
+            track->unkF4.updateFlags |= 0x10;
+        }
+        track->cmdDataPtr = val;
+    }
+}
+
+void func_80015668(SoundSeqTrack *track, u32 bit) {
+    s32 vol;
+    s32 pitch;
+    s32 val;
+    s32 flags;
+    s16 *wave;
+    s32 mono;
+    s32 value;
+
+    vol = ((s16)(track->panShifted >> 16) * (track->pitchBend >> 8)) >> 7;
+    flags = track->flags;
+    if (flags & 1) {
+        if (track->unkA0 == 0) {
+            if (--track->unkA4 == 0) {
+                track->unkA4 = track->unkA2;
+                wave = track->unk18;
+                if (wave[0] == 0 && wave[1] == 0) {
+                    track->unk18 = wave + wave[2];
+                }
+                value = *track->unk18++;
+                val = (track->unkA8 * value) >> 16;
+                if (val != track->portamento) {
+                    track->portamento = val;
+                    track->unkF4.updateFlags |= 0x10;
+                    if (val >= 0) {
+                        track->portamento = val * 2;
+                    }
+                }
+            }
+        }
+    }
+    if (flags & 2) {
+        if (track->unkB4 == 0) {
+            if (--track->unkB8 == 0) {
+                track->unkB8 = track->unkB6;
+                wave = track->unk1C;
+                if (wave[0] == 0 && wave[1] == 0) {
+                    track->unk1C = wave + wave[2];
+                }
+                value = *track->unk1C++;
+                val = ((vol * (track->volumeLfo >> 8)) << 9) >> 16;
+                val = (val * value) >> 15;
+                if (val != track->volumeLfoStop) {
+                    track->volumeLfoStop = val;
+                    track->unkF4.updateFlags |= 3;
+                }
+            }
+        }
+    }
+    if (flags & 4) {
+        if (--track->unkC6 == 0) {
+            track->unkC6 = track->unkC4;
+            wave = track->unk20;
+            if (wave[0] == 0 && wave[1] == 0) {
+                track->unk20 = wave + wave[2];
+            }
+            value = *track->unk20++;
+            val = ((track->panLfo >> 8) * value) >> 15;
+            if (val != track->panLfoStop) {
+                track->panLfoStop = val;
+                track->unkF4.updateFlags |= 3;
+            }
+        }
+    }
+    if (flags & 0x20) {
+        vol = ((s16)(track[-1].unkF4.sampleRate << 1) * (track->pitchBend >> 8)) >> 7;
+        track->unkF4.updateFlags |= 3;
+    }
+    if (track->unkF4.updateFlags & 3) {
+        vol += track->volumeLfoStop;
+        vol = (vol * (s32)(((u32)g_sndSeqState->unk50 >> 16) & 0x7F)) >> 7;
+        val = ((track->notePitch >> 8) + track->panLfoStop) & 0xFF;
+        if (D_8007728C & 2) {
+            mono = (vol * D_80051954) >> 15;
+            track->unkF4.volRight = mono;
+            track->unkF4.volLeft = mono;
+        } else {
+            track->unkF4.volLeft = (vol * D_80051854[val]) >> 15;
+            track->unkF4.volRight = (vol * D_80051854[val ^ 0xFF]) >> 15;
+        }
+    }
+    if (flags & 0x10) {
+        pitch = track[-1].unkF4.sampleRate + track->portamento + (s16)(track->cmdDataPtr >> 16);
+        val = D_80077280 & 0xFF0000;
+        if (val != 0) {
+            val >>= 16;
+            if (val < 0x80) {
+                pitch += (pitch * val) >> 7;
+            } else {
+                pitch = (pitch * val) >> 8;
+            }
+        }
+        track->unkF4.sampleRate = ((u16)track->timing + pitch) & 0x3FFF;
+        track->unkF4.updateFlags |= 0x10;
+    } else if (track->unkF4.updateFlags & 0x10) {
+        pitch = track->loopCounter + track->portamento + (s16)(track->cmdDataPtr >> 16);
+        val = D_80077280 & 0xFF0000;
+        if (val != 0) {
+            val >>= 16;
+            if (val < 0x80) {
+                pitch += (pitch * val) >> 7;
+            } else {
+                pitch = (pitch * val) >> 8;
+            }
+        }
+        track->unkF4.sampleRate = ((u16)track->timing + pitch) & 0x3FFF;
+    }
+}
+
+void func_80015AC8(SoundSeqTrack *track, u32 bit) {
+    s32 vol;
+    s32 pitch;
+    s32 val;
+    s32 mul;
+    s32 pan;
+    s32 flags;
+    s16 *wave;
+    s32 mono;
+    s32 value;
+
+    vol = ((s16)(track->panShifted >> 16) * (track->pitchBend >> 8)) >> 7;
+    flags = track->flags;
+    if (flags & 1) {
+        if (--track->unkA4 == 0) {
+            track->unkA4 = track->unkA2;
+            wave = track->unk18;
+            if (wave[0] == 0 && wave[1] == 0) {
+                track->unk18 = wave + wave[2];
+            }
+            value = *track->unk18++;
+            val = (track->unkA8 * value) >> 16;
+            if (val != track->portamento) {
+                track->portamento = val;
+                track->unkF4.updateFlags |= 0x10;
+                if (val >= 0) {
+                    track->portamento = val * 2;
+                }
+            }
+        }
+    }
+    if (flags & 2) {
+        if (--track->unkB8 == 0) {
+            track->unkB8 = track->unkB6;
+            wave = track->unk1C;
+            if (wave[0] == 0 && wave[1] == 0) {
+                track->unk1C = wave + wave[2];
+            }
+            val = ((vol * (track->volumeLfo >> 8)) << 9) >> 16;
+            value = *track->unk1C++;
+            val = (val * value) >> 15;
+            if (val != track->volumeLfoStop) {
+                track->volumeLfoStop = val;
+                track->unkF4.updateFlags |= 3;
+            }
+        }
+    }
+    if (flags & 4) {
+        if (--track->unkC6 == 0) {
+            track->unkC6 = track->unkC4;
+            wave = track->unk20;
+            if (wave[0] == 0 && wave[1] == 0) {
+                track->unk20 = wave + wave[2];
+            }
+            value = *track->unk20++;
+            val = ((track->panLfo >> 8) * value) >> 15;
+            if (val != track->panLfoStop) {
+                track->panLfoStop = val;
+                track->unkF4.updateFlags |= 3;
+            }
+        }
+    }
+    if (flags & 0x20) {
+        vol = ((s16)(track[-1].unkF4.sampleRate << 1) * (track->pitchBend >> 8)) >> 7;
+        track->unkF4.updateFlags |= 3;
+    }
+    if (track->unkF4.updateFlags & 3) {
+        vol += track->volumeLfoStop;
+        if (track->keyOnMask & 0x2000000) {
+            pan = 0x80;
+        } else {
+            vol = (vol * (s8)(track->expression >> 8)) >> 7;
+            pan = ((track->notePitch + track->pitchModDepth) >> 8) + track->panLfoStop + 0x80;
+            pan &= 0xFF;
+        }
+        if (D_8007728C & 2) {
+            mono = (vol * D_80051954) >> 15;
+            track->unkF4.volRight = mono;
+            track->unkF4.volLeft = mono;
+        } else {
+            track->unkF4.volLeft = (vol * D_80051854[pan]) >> 15;
+            track->unkF4.volRight = (vol * D_80051854[pan ^ 0xFF]) >> 15;
+        }
+    }
+    if (flags & 0x10) {
+        pitch = track[-1].unkF4.sampleRate + track->portamento + (s16)(track->cmdDataPtr >> 16);
+        mul = track->loopLimit & 0xFF00;
+        if (!(track->keyOnMask & 0x2000000)) {
+            if (mul != 0) {
+                mul >>= 8;
+                if (mul < 0x80) {
+                    pitch += (pitch * mul) >> 7;
+                } else {
+                    pitch = (pitch * mul) >> 8;
+                }
+            }
+        }
+        track->unkF4.sampleRate = ((u16)track->timing + pitch) & 0x3FFF;
+        track->unkF4.updateFlags |= 0x10;
+    } else if (track->unkF4.updateFlags & 0x10) {
+        pitch = track->loopCounter + track->portamento + (s16)(track->cmdDataPtr >> 16);
+        mul = track->loopLimit & 0xFF00;
+        if (!(track->keyOnMask & 0x2000000)) {
+            if (mul != 0) {
+                mul >>= 8;
+                if (mul < 0x80) {
+                    pitch += (pitch * mul) >> 7;
+                } else {
+                    pitch = (pitch * mul) >> 8;
+                }
+            }
+        }
+        track->unkF4.sampleRate = ((u16)track->timing + pitch) & 0x3FFF;
+    }
+}
 
 /**
  * @brief Finds the SPU voice with the lowest priority and frees it for reuse.
