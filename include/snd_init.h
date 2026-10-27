@@ -41,7 +41,7 @@ extern u16 D_80074FE4;
 extern s32  D_80074FE8[];        /* parsed bank header (level/addr/counts) */
 extern s32  D_80074FF8;          /* decode work buffer / scratch pointer */
 extern s32 D_80075078;
-extern s32  g_sndCmdArgs[4];    /* sound-command argument buffer (filled per command, read by the dispatcher) */
+extern s32  g_sndCmdArgs[6];    /* sound-command argument buffer (filled per command, read by the dispatcher) */
 extern s32  D_80077288[];
 extern s32  D_8007728C;
 extern s32  D_800772CC;

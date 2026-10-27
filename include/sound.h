@@ -279,6 +279,8 @@ extern VoicePoolEntry D_80074F20[12];
 typedef struct {
     /* 0x00 */ s32 params[3];
     /* 0x0C */ s32 playCount;
+    /* 0x10 */ s32 unk10;
+    /* 0x14 */ s32 unk14;
 } SndVoice;
 
 /**
