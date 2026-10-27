@@ -273,6 +273,14 @@ extern s32 D_80074F18;
 /** @brief 12-entry SFX play queue, replayed by @c func_800BF718 after a sound reset. */
 extern VoicePoolEntry D_80074F20[12];
 
+typedef struct {
+    /* 0x00 */ s32 unk00;
+    /* 0x04 */ s16 unk04;
+    /* 0x06 */ s16 unk06;
+} UnkStruct80073CB0;
+
+extern UnkStruct80073CB0 D_80073CB0[];
+extern SoundMusicConfig *D_800772F8[];
 extern s16 D_80051854[];
 extern s16 D_80051954;
 

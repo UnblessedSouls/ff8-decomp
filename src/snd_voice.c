@@ -5,8 +5,6 @@
 #include "snd_init.h"
 #include "snd_voice.h"
 
-extern u8 D_80073CB0[];
-
 void sndReleaseVoice(s32 a0);
 
 void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale) {
@@ -460,7 +458,7 @@ s32 sndAllocVoice(void) {
     u32 i;
     u16 min_val;
     u32 min_idx;
-    u8 *p;
+    UnkStruct80073CB0 *p;
 
     i = 0;
     min_val = 0x7FFF;
@@ -468,12 +466,12 @@ s32 sndAllocVoice(void) {
     p = D_80073CB0;
 
     do {
-        if (*(s16 *)(p + 4) < (s16)min_val) {
-            min_val = *(u16 *)(p + 4);
+        if (p->unk04 < (s16)min_val) {
+            min_val = p->unk04;
             min_idx = i;
         }
         i++;
-        p += 8;
+        p++;
     } while (i < 0x18);
 
     if ((s16)min_val == 0x7FFF) {
@@ -485,7 +483,75 @@ s32 sndAllocVoice(void) {
     return min_idx;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80015FE0);
+void func_80015FE0(SoundSeqTrack *track, u32 active, u32 newVoices, s32 *keyOn) {
+    UnkStruct80073CB0 *env;
+    u32 keyed;
+    u32 bit;
+    s32 i;
+    u32 voice;
+
+    bit = 1;
+    i = 0;
+    keyed = active & g_sndSeqState->unk10;
+    do {
+        if (active & bit) {
+            func_80015668(track, bit);
+            if (track->unkF4.updateFlags != 0) {
+                if (D_8007507C & bit) {
+                    track->unkF4.volRight = 0;
+                    track->unkF4.volLeft = 0;
+                }
+                if (keyed & bit) {
+                    if (newVoices & bit) {
+                        *keyOn |= 1 << i;
+                        track->unkF4.unk00 = i;
+                    } else {
+                        env = D_80073CB0;
+                        voice = 0;
+                        do {
+                            if (env->unk04 == 0) {
+                                *keyOn |= 1 << voice;
+                                track->unkF4.unk00 = voice;
+                                env->unk04 = 0x7FFF;
+                                break;
+                            }
+                            voice++;
+                            env++;
+                            if (voice == 24) {
+                                g_sndSeqState->unk00 |= 2;
+                                voice = sndAllocVoice();
+                                if (voice != 24) {
+                                    *keyOn |= 1 << voice;
+                                    track->unkF4.unk00 = voice;
+                                    D_80073CB0[voice].unk04 = 0x7FFF;
+                                } else {
+                                    track->unkF4.unk00 = voice;
+                                    g_sndSeqState->unk00 |= 1;
+                                }
+                                break;
+                            }
+                        } while (voice < 24);
+                    }
+                    voice = track->unkF4.unk00;
+                    if (voice < 24) {
+                        func_80014FFC(voice, &track->unkF4, track->unkF4.sweep);
+                        D_800772F8[track->unkF4.unk00] = g_sndSeqState;
+                        D_80077288[2] |= 0x100;
+                    }
+                } else {
+                    voice = track->unkF4.unk00;
+                    if (voice < 24) {
+                        func_800150A8(voice, &track->unkF4, track->flags);
+                    }
+                }
+            }
+            active &= ~bit;
+        }
+        bit <<= 1;
+        track++;
+        i++;
+    } while (active != 0);
+}
 
 /**
  * @brief Releases a voice from all active sequence tracks.
@@ -536,22 +602,48 @@ void sndReleaseVoice(s32 a0) {
  * @param a2 SPU voice index to search for.
  * @return 1 if any matching track has its bit set in @p a1, 0 otherwise.
  */
-s32 sndCheckVoiceInMask(u8 *a0, s32 a1, s32 a2) {
+s32 sndCheckVoiceInMask(SoundSeqTrack *tracks, s32 mask, s32 voice) {
     u32 i = 0;
     s32 bit = 1;
     do {
-        if (a2 == ((SoundSeqTrack *)a0)->unkF4.unk00) {
-            if (a1 & (bit << i)) {
+        if (voice == tracks->unkF4.unk00) {
+            if (mask & (bit << i)) {
                 return 1;
             }
         }
         i++;
-        a0 += 0x110;
+        tracks++;
     } while (i < 0x20);
     return 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016344);
+void func_80016344(u32 mask) {
+    UnkStruct80073CB0 *entry;
+    u32 used = (g_sndSeqState->unk04 & g_sndSeqState->unk0C) | mask;
+    u32 i;
+
+    if (D_80073CA8 != NULL) {
+        used |= D_80073CA8->unk04 & D_80073CA8->unk0C;
+    }
+    entry = D_80073CB0;
+    for (i = 0; i < 24; entry++, i++) {
+        if (used & (1 << i)) {
+            entry->unk04 = 0x7FFF;
+        } else {
+            SpuGetVoiceEnvelope(i, &entry->unk04);
+            if (entry->unk04 == 0) {
+                sndReleaseVoice(i);
+            } else if (g_sndSeqState->unk08 != 0) {
+                if (sndCheckVoiceInMask(D_80070D60, g_sndSeqState->unk08, i)) {
+                    entry->unk04 = 0x7FFF;
+                }
+                if (D_80073CA8 != NULL && sndCheckVoiceInMask(D_80073C34, D_80073CA8->unk08, i)) {
+                    entry->unk04 = 0x7FFF;
+                }
+            }
+        }
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016478);
 
