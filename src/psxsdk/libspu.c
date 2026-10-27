@@ -168,3 +168,11 @@ INCLUDE_ASM("asm/nonmatchings/psxsdk/libspu", SpuClearReverbWorkArea);
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libspu", S_CRWA_OBJ_9C);
 
 INCLUDE_ASM("asm/nonmatchings/psxsdk/libspu", S_CRWA_OBJ_170);
+
+INCLUDE_ASM("asm/nonmatchings/psxsdk/libspu", func_8003ED24);
+
+extern s32 D_80056640;
+
+void func_8003ED54(s32 *a0) {
+    *a0 = D_80056640;
+}
