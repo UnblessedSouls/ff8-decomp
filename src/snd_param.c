@@ -1,5 +1,7 @@
 #include "common.h"
+#include "psxsdk/libspu.h"
 #include "sound.h"
+#include "snd_param.h"
 
 extern s32 D_80075028;
 extern u16 D_80073E62;
@@ -282,7 +284,7 @@ void sndStub(void) {
 /**
  * @brief Configures the SPU reverb mode if it differs from the current setting.
  *
- * Queries the current reverb mode via func_8003ED54. If the current mode
+ * Queries the current reverb mode via SpuGetReverbModeType. If the current mode
  * differs from @p a0, disables reverb, sets the new mode type (with 0x100
  * flag to apply immediately), and re-enables reverb.
  *
@@ -290,7 +292,7 @@ void sndStub(void) {
  */
 void sndSetReverbMode(s32 a0) {
     s32 current;
-    func_8003ED54(&current);
+    SpuGetReverbModeType(&current);
     if (current != a0) {
         SpuSetReverb(0);
         SpuSetReverbModeType(a0 | 0x100);

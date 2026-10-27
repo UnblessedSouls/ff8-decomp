@@ -1,5 +1,7 @@
 #include "common.h"
+#include "psxsdk/libspu.h"
 #include "sound.h"
+#include "snd_track.h"
 
 extern s32 D_80075028[];
 extern s32 D_80077288[];
@@ -1163,7 +1165,7 @@ void sndStreamDisableIrq(void) {
     SoundStream *s0 = &g_sndStream;
     if (s0->active != 0) {
         SpuSetIRQ(0);
-        SpuSetIRQCallback(0);
+        SpuSetIRQCallback(NULL);
         spuSetIrqAddr(s0->active);
         D_80075028[8] &= ~s0->active;
         D_80077288[2] |= 0x100;
@@ -1178,10 +1180,10 @@ INCLUDE_ASM("asm/nonmatchings/snd_track", func_8001DFF4);
  *        sndStreamSetupMono, and initiates DMA transfer of 0x800 bytes.
  */
 void sndStreamBeginTransfer(void) {
-    s32 addr = g_sndStream.spuBaseAddr + 0x800;
+    u8 *addr = g_sndStream.spuBaseAddr + 0x800;
     SpuSetTransferStartAddr(0x2100);
-    func_8003E494(sndStreamSetupMono);
-    func_8003E3A4(addr, 0x800);
+    SpuSetTransferCallback(sndStreamSetupMono);
+    SpuWrite(addr, 0x800);
 }
 
 INCLUDE_ASM("asm/nonmatchings/snd_track", func_8001E0CC);

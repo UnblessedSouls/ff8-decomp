@@ -233,7 +233,7 @@ typedef struct {
  * volume/pan, loop counters and IRQ state.
  */
 typedef struct {
-    /* 0x00 */ s32 spuBaseAddr;    /**< SPU base address for stream. */
+    /* 0x00 */ u8 *spuBaseAddr;    /**< SPU base address for stream. */
     /* 0x04 */ s32 unk04;
     /* 0x08 */ s32 flags;          /**< Control flags (bit 24 gates the tick IRQ callback). */
     /* 0x0C */ s32 active;         /**< Active/IRQ voice bitmask (nonzero = playing). */

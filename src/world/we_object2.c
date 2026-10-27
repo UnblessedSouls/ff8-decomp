@@ -3,6 +3,7 @@
 #include "field.h"
 #include "gamestate.h"
 #include "sound.h"
+#include "snd_param.h"
 #include "ui/dialog.h"
 #include "world.h"
 #include "world/we_object2.h"

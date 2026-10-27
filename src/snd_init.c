@@ -1,6 +1,9 @@
 #include "common.h"
+#include "psxsdk/libspu.h"
 #include "snd_init.h"
 #include "snd_dma.h"
+#include "snd_param.h"
+#include "snd_track.h"
 
 
 /** @brief Initializes the SPU (Sound Processing Unit).
@@ -76,9 +79,9 @@ s32 sndStopAll(void) {
 
     DisableEvent(D_8005169C);
     SpuSetIRQ(0);
-    SpuSetIRQCallback(0);
+    SpuSetIRQCallback(NULL);
     if (D_80074ED4 == 1) {
-        sndDmaWriteSpu((s32)D_800516B8, 0x40);
+        sndDmaWriteSpu(D_800516B8, 0x40);
         sndDmaWait();
     }
     for (i = 0; i < 24; i++) {
@@ -421,11 +424,11 @@ void sndDisableReverb(u32 mode) {
 }
 
 /**
- * @brief Multiply input by 256, call func_8003ED24 with sign-extended 16-bit value,
+ * @brief Multiply input by 256, call SpuSetReverbModeDepth with sign-extended 16-bit value,
  *        return full shifted result.
  *
  * Shifts the input left by 8, sign-extends the lower 16 bits, passes
- * the sign-extended value to func_8003ED24 as both arguments, then
+ * the sign-extended value to SpuSetReverbModeDepth as both arguments, then
  * returns the original (non-truncated) shifted value.
  *
  * @param a0 Input value to shift.
@@ -433,7 +436,7 @@ void sndDisableReverb(u32 mode) {
  */
 s32 func_800133D8(s32 arg0) {
     arg0 <<= 8;
-    func_8003ED24((s16)arg0, (s16)arg0);
+    SpuSetReverbModeDepth((s16)arg0, (s16)arg0);
     return arg0;
 }
 
@@ -870,7 +873,7 @@ s32 sndResetState(void) {
  * @return @c D_80077360 (the active streaming handle, 0 when idle).
  *
  */
-s32 sndStreamBank(s32 srcPtr, u32 numBytes, s32 waitDma) {
+s32 sndStreamBank(u8 *srcPtr, u32 numBytes, s32 waitDma) {
     s32 val1;
     s32 val2;
 
@@ -1221,9 +1224,10 @@ void sndCmdE6(s32 value) {
  * @param slot Bank slot selector (0 = primary, nonzero = alternate).
  * @return 0 on success, nonzero error code on validation failure.
  */
-s32 sndUploadSampleBank(s32 bank, s32 slot) {
+s32 sndUploadSampleBank(u8 *bank, s32 slot) {
     s32 spuAddr;
     s32 result;
+    SndBankDesc *desc;
 
     result = sndValidateBank(bank);
     if (result == 0) {
@@ -1234,20 +1238,20 @@ s32 sndUploadSampleBank(s32 bank, s32 slot) {
         }
         {
             SoundSeqTrack *ptr = g_sndSeqState;
-            /* slot = bank is set in both branches below rather than hoisted after
+            /* desc = bank is set in both branches below rather than hoisted after
                the if: the original stores the descriptor pointer twice, and
                collapsing it to a single assignment drops the match. */
             if ((ptr->instParams | ptr->keyOnPending) && (ptr->field00 & 0x400)) {
                 spuAddr -= 0x20000;
-                slot = bank;
+                desc = (SndBankDesc *)bank;
             } else {
-                slot = bank;
+                desc = (SndBankDesc *)bank;
             }
             bank += 0x40;
             SpuSetTransferStartAddr(spuAddr);
-            sndDmaWriteSpu(bank, ((SndBankDesc *)slot)->spuAddr);
-            ((SndBankDesc *)slot)->spuLoadedAddr = spuAddr;
-            func_8001A57C(slot, (s32)D_80073C38, 0x70);
+            sndDmaWriteSpu(bank, desc->spuAddr);
+            desc->spuLoadedAddr = spuAddr;
+            func_8001A57C(desc, (s32)D_80073C38, 0x70);
         }
     } else {
         D_80073C58 = 0;
