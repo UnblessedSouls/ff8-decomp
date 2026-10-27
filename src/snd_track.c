@@ -1,6 +1,7 @@
 #include "common.h"
 #include "psxsdk/libspu.h"
 #include "sound.h"
+#include "snd_track.h"
 
 extern s32 D_80075028[];
 extern s32 D_80077288[];
