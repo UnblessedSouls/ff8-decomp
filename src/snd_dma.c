@@ -3,15 +3,22 @@
 #include "sound.h"
 #include "snd_dma.h"
 #include "snd_note.h"
+#include "snd_init.h"
 
-extern volatile s32 D_80074ED4;
 extern u8 D_80074E88[];
-extern u8 D_800516B8[];
-extern s32 D_8005169C;
 
-void spuSetIrqAddr(u32 val);
-
-INCLUDE_ASM("asm/nonmatchings/snd_dma", func_800146F0);
+void func_800146F0(u32 *src, s32 *dst, s32 base, s32 count) {
+    // Counting count down to zero is needed for the match.
+    do {
+        dst[0] = src[0] + base;
+        dst[1] = src[1] + base;
+        dst[2] = src[2];
+        dst[3] = src[3];
+        src += 4;
+        dst += 4;
+        count--;
+    } while (count != 0);
+}
 
 /** @brief Adds magic constant 0xB0BEB4BF to value at pointer. */
 u32 sndValidateBank(u32 *a0) {
@@ -90,11 +97,33 @@ s32 sndUploadSample(SndBankDesc *a0, s32 a1) {
     if (sndValidateBank((u32 *)a0) != 0) {
         return -1;
     }
-    func_800148B0((s32)a0, a1, a0->spuSize, a0->spuAddr);
+    func_800148B0((u32 *)a0, a1, a0->spuSize, a0->spuAddr);
     return 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_dma", func_800148B0);
+s32 func_800148B0(u32 *data, s32 wait, s32 slot, s32 spuAddr) {
+    SndBankDesc *header;
+
+    sndDmaWait();
+    if (sndValidateBank(data) == 0) {
+        header = (SndBankDesc *)data;
+        SpuSetTransferStartAddr(spuAddr);
+        data += 0x10;
+        sndDmaWriteSpu((u8 *)(data + (header->sampleCount << 2)), header->dataSize);
+        func_800146F0(data, (s32 *)&D_80073E68[slot], spuAddr, header->sampleCount);
+        if (wait != 0) {
+            // header is never NULL here, but the original tests it, and the match needs the test.
+            if (header != NULL) {
+                sndDmaWait();
+            } else {
+                sndDmaWait();
+            }
+        }
+        return 0;
+    }
+    D_80074ED4 = -1;
+    return -1;
+}
 
 INCLUDE_ASM("asm/nonmatchings/snd_dma", func_80014974);
 
