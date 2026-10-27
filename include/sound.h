@@ -259,6 +259,8 @@ extern SoundMusicConfig D_80073D70;
 extern SoundMusicConfig D_80073DF0;
 extern SoundSeqTrack *D_80074EE0;
 extern s32 D_800772F4;
+extern s32 D_80073DE8;
+extern s32 D_80073DEC;
 extern s32 D_80077280;
 extern s32 D_80077284;
 extern s32 D_8007507C;

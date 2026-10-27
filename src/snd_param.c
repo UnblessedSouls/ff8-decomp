@@ -3,10 +3,8 @@
 #include "sound.h"
 #include "snd_param.h"
 #include "snd_bank.h"
+#include "snd_init.h"
 
-extern u16 D_80073E62;
-extern u16 D_80073E60;
-extern s32 D_8007728C;
 extern s32 D_800772A4;
 
 /**
@@ -19,9 +17,28 @@ void sndSetVolumeFade(s8 *a0) {
     D_80077284 = val << 16;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_param", func_80019934);
+void func_80019934(s32 *args) {
+    s32 steps = 1;
 
-INCLUDE_ASM("asm/nonmatchings/snd_param", func_8001999C);
+    if (args[0] != 0) {
+        steps = args[0];
+    }
+    D_80073DEC = (((s8)args[1] << 16) - D_80077284) / steps;
+    D_80073E62 = steps;
+}
+
+void func_8001999C(s32 *args) {
+    s32 steps = 1;
+    s32 start;
+
+    if (args[1] != 0) {
+        steps = args[0];
+    }
+    start = (s8)args[1] << 16;
+    D_80077284 = start;
+    D_80073DEC = (((s8)args[2] << 16) - start) / steps;
+    D_80073E62 = steps;
+}
 
 /**
  * @brief Clears D_80073E60, stores *a0 << 16 into D_80077280.
@@ -33,9 +50,28 @@ void sndSetPanFade(s8 *a0) {
     D_80077280 = val << 16;
 }
 
-INCLUDE_ASM("asm/nonmatchings/snd_param", func_80019A2C);
+void func_80019A2C(s32 *args) {
+    s32 steps = 1;
 
-INCLUDE_ASM("asm/nonmatchings/snd_param", func_80019A94);
+    if (args[0] != 0) {
+        steps = args[0];
+    }
+    D_80073DE8 = (((s8)args[1] << 16) - D_80077280) / steps;
+    D_80073E60 = steps;
+}
+
+void func_80019A94(s32 *args) {
+    s32 steps = 1;
+    s32 start;
+
+    if (args[1] != 0) {
+        steps = args[0];
+    }
+    start = (s8)args[1] << 16;
+    D_80077280 = start;
+    D_80073DE8 = (((s8)args[2] << 16) - start) / steps;
+    D_80073E60 = steps;
+}
 
 /**
  * @brief Transfers sound data for main and optional secondary sound sources.
