@@ -1,15 +1,12 @@
 #include "common.h"
 #include "sound.h"
+#include "snd_init.h"
+#include "snd_bank.h"
+#include "snd_note.h"
+#include "snd_track.h"
 
 extern s32 D_80074EB8[];
-extern u8 D_80070D60[];
-extern s32 D_80073CA8;
-extern u8 *D_80073C34;
-extern s32 D_80074EB0;
 extern VoicePoolEntry D_80074F20[12];
-extern u16 D_80074FE4;
-extern s32 D_80075078;
-extern s32 D_80075028[];
 
 /**
  * @brief Adjusts instrument index upward if flag 0x400 is set and instrument is in range.
@@ -25,8 +22,8 @@ s32 func_80016DB4(s32 a0, SoundSeqTrack *a1) {
     if (a0 & 0x400) {
         if ((u32)(a1->instrument - 0x40) < 0x40) {
             s32 adj = 0x20000;
-            a1->sampleAddr = a1->sampleAddr + adj;
-            a1->sampleLoop = a1->sampleLoop + adj;
+            a1->unkF4.startAddr = a1->unkF4.startAddr + adj;
+            a1->unkF4.repeatAddr = a1->unkF4.repeatAddr + adj;
             a1->instrument = a1->instrument + 0x20;
         }
     }
@@ -47,8 +44,8 @@ s32 func_80016E08(s32 a0, SoundSeqTrack *a1) {
     if (a0 & 0x400) {
         if ((u32)(a1->instrument - 0x60) < 0x20) {
             s32 adj = (s32)0xFFFE0000;
-            a1->sampleAddr = a1->sampleAddr + adj;
-            a1->sampleLoop = a1->sampleLoop + adj;
+            a1->unkF4.startAddr = a1->unkF4.startAddr + adj;
+            a1->unkF4.repeatAddr = a1->unkF4.repeatAddr + adj;
             a1->instrument = a1->instrument - 0x20;
         }
     }
@@ -98,7 +95,7 @@ void sndInitTrack(SoundSeqTrack *track, s32 bankId) {
     track->duration = 0;
     track->cmdDataPtr = 0;
     track->durationDelta2 = 0;
-    track->pad90 = 0;
+    track->unk90 = 0;
     track->volumeAccum = 0;
     track->volumeDelta = 0;
     track->panFade = 0;
@@ -107,8 +104,8 @@ void sndInitTrack(SoundSeqTrack *track, s32 bankId) {
     track->flags = 0;
     track->panLfoStop = 0;
     track->timerActive = 0;
-    track->pad6E = 0xFFFF;
-    track->instOverride = 0;
+    track->unk6E = 0xFFFF;
+    track->unkF4.sweep = 0;
     track->panLfo = 0;
     track->volumeLfo = 0;
     track->delaySend = 0;
@@ -137,7 +134,7 @@ s32 sndBuildVoiceMask(u8 *a0, s32 a1) {
     s32 bit = 1;
     do {
         if (a1 & (bit << i)) {
-            s32 val = ((SoundSeqTrack *)a0)->voiceMask;
+            s32 val = ((SoundSeqTrack *)a0)->unkF4.unk00;
             if ((u32)val < 0x18) {
                 result |= (bit << val);
             }
@@ -169,18 +166,18 @@ void sndReleaseVoiceFromTracks(s32 voiceId) {
     s32 i;
     SoundSeqTrack *track;
 
-    track = (SoundSeqTrack *)D_80070D60;
+    track = D_80070D60;
     for (i = 32; i != 0; i--) {
-        if (track->voiceMask == voiceId)
-            track->voiceMask = 0x18;
+        if (track->unkF4.unk00 == voiceId)
+            track->unkF4.unk00 = 0x18;
         track++;
     }
 
-    if (D_80073CA8 != 0) {
-        track = (SoundSeqTrack *)D_80073C34;
+    if (D_80073CA8 != NULL) {
+        track = D_80073C34;
         for (i = 32; i != 0; i--) {
-            if (track->voiceMask == voiceId)
-                track->voiceMask = 0x18;
+            if (track->unkF4.unk00 == voiceId)
+                track->unkF4.unk00 = 0x18;
             track++;
         }
     }
@@ -202,8 +199,8 @@ INCLUDE_ASM("asm/nonmatchings/snd_bank", func_80017AAC);
  */
 INCLUDE_ASM("asm/nonmatchings/snd_bank", func_80017C9C);
 
-void func_80017D14(SoundSeqTrack *seq, s32 *tracks) {
-    s32 value = seq->instParams;
+void func_80017D14(SoundMusicConfig *seq, SoundSeqTrack *tracks) {
+    s32 value = seq->unk04;
     s32 mask;
     s32 bit;
     s32 *flags;
@@ -224,7 +221,7 @@ void func_80017D14(SoundSeqTrack *seq, s32 *tracks) {
 }
 
 void func_80017D5C(void) {
-    s32 value = D_80075028[0];
+    s32 value = D_80075028.unk00;
     s32 mask;
     s32 bit;
     SoundSeqTrack *tracks;
@@ -282,7 +279,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_bank", func_80018158);
 void sndConfigureTrackPlayback(s32 *a0) {
     s32 val, result;
     func_8001708C(a0[0], a0[3]);
-    g_sndSeqState->field5E = *(u16 *)((u8 *)a0 + 8);
+    g_sndSeqState->unk5E = *(u16 *)((u8 *)a0 + 8);
     result = 0;
     /* The val load is block-extracted so result binds to $a0: a plain
        `val = a0[4];` here schedules result into $v1 and mismatches. */
@@ -457,7 +454,7 @@ INCLUDE_ASM("asm/nonmatchings/snd_bank", func_800192D8);
  * @brief Applies expression value to all active tracks matching a bitmask.
  *
  * Iterates 12 tracks in D_80072F70 (stride 0x110). For each track whose
- * bit is set in D_80075028[0] and whose flags do NOT have bit 0x2000000,
+ * bit is set in D_80075028.unk00 and whose flags do NOT have bit 0x2000000,
  * reads the expression byte from a0, clears the halfword at +0x8A,
  * stores (byte & 0x7F) << 8 at +0x6A, and ORs 0x3 into updateFlags.
  *
@@ -489,7 +486,7 @@ void func_800197F4(u8 *param) {
         if (!(track->keyOnMask & 0x2000000)) {
             track->loopLimit = *param << 8;
             track->pitchFadeCounter = 0;
-            track->updateFlags |= 0x10;
+            track->unkF4.updateFlags |= 0x10;
         }
         track++;
     }

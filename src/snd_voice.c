@@ -1,5 +1,7 @@
 #include "common.h"
 #include "sound.h"
+#include "snd_dma.h"
+#include "snd_voice.h"
 
 extern u8 D_80073CB0[];
 
@@ -7,12 +9,6 @@ void sndReleaseVoice(s32 a0);
 
 INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80014FFC);
 
-void spuSetVoicePitch(s32 voice, s32 val);
-void spuSetVoiceVolume(s32 voice, s32 vol_l, s32 vol_r, s32 scale);
-void spuSetVoiceStartAddr(s32 voice, u32 val);
-void spuSetVoiceRepeatAddr(s32 voice, u32 val);
-void spuSetVoiceAdsrHigh(s32 voice, s32 val);
-void spuSetVoiceAdsrLow(s32 voice, s32 val);
 
 /**
  * @brief Applies pending SPU register updates for a voice.
@@ -124,9 +120,6 @@ s32 sndAllocVoice(void) {
 
 INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80015FE0);
 
-extern u8 D_80070D60[];
-extern s32 D_80073CA8;
-extern u8 *D_80073C34;
 
 /**
  * @brief Releases a voice from all active sequence tracks.
@@ -150,7 +143,7 @@ void sndReleaseVoice(s32 a0) {
         i--;
         ptr += 0x110;
     } while (i != 0);
-    if (D_80073CA8 != 0) {
+    if (D_80073CA8 != NULL) {
         base = (s32)D_80073C34;
         i = 32;
         replacement = 24;
@@ -181,7 +174,7 @@ s32 sndCheckVoiceInMask(u8 *a0, s32 a1, s32 a2) {
     u32 i = 0;
     s32 bit = 1;
     do {
-        if (a2 == ((SoundSeqTrack *)a0)->voiceMask) {
+        if (a2 == ((SoundSeqTrack *)a0)->unkF4.unk00) {
             if (a1 & (bit << i)) {
                 return 1;
             }
@@ -229,7 +222,7 @@ void func_80016A1C(u8 *tracks, s32 *resultPtr, s32 trackMask, s32 finalMask) {
 
     do {
         if (trackMask & bit) {
-            s32 voice = ((SoundSeqTrack *)tracks)->voiceMask;
+            s32 voice = ((SoundSeqTrack *)tracks)->unkF4.unk00;
             if ((u32)voice < 0x18) {
                 *resultPtr |= one << voice;
             }
