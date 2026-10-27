@@ -5,10 +5,21 @@
 #include "snd_init.h"
 #include "snd_voice.h"
 
-void sndReleaseVoice(s32 a0);
-void func_80016C28(u32 *out, u32 maskSecond, u32 maskMain, u32 extra);
+static void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale);
+static void func_800150A8(s32 a0, SndVoiceParam *a1, s32 a2);
+static void func_80015668(SoundSeqTrack *track, u32 bit);
+static void func_80015AC8(SoundSeqTrack *track, u32 bit);
+static s32 sndAllocVoice(void);
+static void func_80015FE0(SoundSeqTrack *track, u32 active, u32 newVoices, s32 *keyOn);
+static void sndReleaseVoice(s32 a0);
+static s32 sndCheckVoiceInMask(SoundSeqTrack *tracks, s32 mask, s32 voice);
+static void func_80016344(u32 mask);
+static void func_80016478(SoundMusicConfig *config, SoundSeqTrack *tracks);
+static void sndStoreTrackTiming(SoundMusicConfig *config, SoundSeqTrack *tracks);
+static void func_80016A1C(SoundSeqTrack *tracks, u32 *resultPtr, u32 trackMask, u32 finalMask);
+static void func_80016C28(u32 *out, u32 maskSecond, u32 maskMain, u32 extra);
 
-void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale) {
+static void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale) {
     u16 *reg;
     s32 left;
     s32 right;
@@ -45,7 +56,7 @@ void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale) {
  * @param a1 Pointer to the voice parameter structure.
  * @param a2 The owning track's flags (unused).
  */
-void func_800150A8(s32 a0, SndVoiceParam *a1, s32 a2) {
+static void func_800150A8(s32 a0, SndVoiceParam *a1, s32 a2) {
     s32 flags = a1->updateFlags;
 
     if (flags == 0) {
@@ -221,7 +232,7 @@ void func_800151C4(SoundSeqTrack *track, u32 bit, s32 isSfx) {
     }
 }
 
-void func_80015668(SoundSeqTrack *track, u32 bit) {
+static void func_80015668(SoundSeqTrack *track, u32 bit) {
     s32 vol;
     s32 pitch;
     s32 val;
@@ -330,7 +341,7 @@ void func_80015668(SoundSeqTrack *track, u32 bit) {
     }
 }
 
-void func_80015AC8(SoundSeqTrack *track, u32 bit) {
+static void func_80015AC8(SoundSeqTrack *track, u32 bit) {
     s32 vol;
     s32 pitch;
     s32 val;
@@ -455,7 +466,7 @@ void func_80015AC8(SoundSeqTrack *track, u32 bit) {
  *
  * @return The index of the freed voice, or 0x18 (24) if no voice is available.
  */
-s32 sndAllocVoice(void) {
+static s32 sndAllocVoice(void) {
     u32 i;
     u16 min_val;
     u32 min_idx;
@@ -484,7 +495,7 @@ s32 sndAllocVoice(void) {
     return min_idx;
 }
 
-void func_80015FE0(SoundSeqTrack *track, u32 active, u32 newVoices, s32 *keyOn) {
+static void func_80015FE0(SoundSeqTrack *track, u32 active, u32 newVoices, s32 *keyOn) {
     UnkStruct80073CB0 *env;
     u32 keyed;
     u32 bit;
@@ -557,36 +568,33 @@ void func_80015FE0(SoundSeqTrack *track, u32 active, u32 newVoices, s32 *keyOn) 
 /**
  * @brief Releases a voice from all active sequence tracks.
  *
- * Iterates over 32 track entries in the D_80070D60 array (stride 0x110,
- * voice assignment at offset +0xF4). Any track assigned to voice @p a0
- * is reassigned to voice 24 (invalid/none). Also checks the secondary
- * sequence array D_80073C34 if D_80073CA8 is set.
+ * Any of the 32 tracks in D_80070D60 assigned to voice @p a0 is reassigned
+ * to voice 24 (invalid/none). Also checks the secondary sequence array
+ * D_80073C34 if D_80073CA8 is set.
  *
  * @param a0 SPU voice index to release (0-23).
  */
-void sndReleaseVoice(s32 a0) {
-    s32 base = (s32)D_80070D60;
+static void sndReleaseVoice(s32 a0) {
+    SoundSeqTrack *track = D_80070D60;
     s32 i = 32;
-    s32 replacement = 24;
-    s32 ptr = base + 0xF4;
+
+    // Counting i down is needed for the match.
     do {
-        if (a0 == *(s32 *)ptr) {
-            *(s32 *)ptr = replacement;
+        if (a0 == track->unkF4.unk00) {
+            track->unkF4.unk00 = 24;
         }
         i--;
-        ptr += 0x110;
+        track++;
     } while (i != 0);
     if (D_80073CA8 != NULL) {
-        base = (s32)D_80073C34;
+        track = D_80073C34;
         i = 32;
-        replacement = 24;
-        ptr = base + 0xF4;
         do {
-            if (a0 == *(s32 *)ptr) {
-                *(s32 *)ptr = replacement;
+            if (a0 == track->unkF4.unk00) {
+                track->unkF4.unk00 = 24;
             }
             i--;
-            ptr += 0x110;
+            track++;
         } while (i != 0);
     }
 }
@@ -603,7 +611,7 @@ void sndReleaseVoice(s32 a0) {
  * @param a2 SPU voice index to search for.
  * @return 1 if any matching track has its bit set in @p a1, 0 otherwise.
  */
-s32 sndCheckVoiceInMask(SoundSeqTrack *tracks, s32 mask, s32 voice) {
+static s32 sndCheckVoiceInMask(SoundSeqTrack *tracks, s32 mask, s32 voice) {
     u32 i = 0;
     s32 bit = 1;
     do {
@@ -618,7 +626,7 @@ s32 sndCheckVoiceInMask(SoundSeqTrack *tracks, s32 mask, s32 voice) {
     return 0;
 }
 
-void func_80016344(u32 mask) {
+static void func_80016344(u32 mask) {
     UnkStruct80073CB0 *entry;
     u32 used = (g_sndSeqState->unk04 & g_sndSeqState->unk0C) | mask;
     u32 i;
@@ -646,7 +654,7 @@ void func_80016344(u32 mask) {
     }
 }
 
-void func_80016478(SoundMusicConfig *config, SoundSeqTrack *tracks) {
+static void func_80016478(SoundMusicConfig *config, SoundSeqTrack *tracks) {
     s32 level = config->unk50;
 
     D_80074F10.unk0C = level;
@@ -664,7 +672,7 @@ extern s32 D_80074F1C;
  * @param config Music config to update.
  * @param tracks The config's track array (unused).
  */
-void sndStoreTrackTiming(SoundMusicConfig *config, SoundSeqTrack *tracks) {
+static void sndStoreTrackTiming(SoundMusicConfig *config, SoundSeqTrack *tracks) {
     config->unk50 = D_80074F1C;
 }
 
@@ -768,9 +776,9 @@ void func_800164D8(void) {
         D_80077288[2] &= ~0x10;
     }
     if (active & 0x100) {
-        func_80016C28((u32 *)&D_80077368[1], D_80073CA8->unk3C, g_sndSeqState->unk3C, D_80075028.unk1C);
-        func_80016C28((u32 *)&D_80077368[0], D_80073CA8->unk40, g_sndSeqState->unk40, D_80075028.unk20);
-        func_80016C28((u32 *)&D_80077368[2], D_80073CA8->unk44, g_sndSeqState->unk44, D_80075028.unk24);
+        func_80016C28(&D_80077368[1], D_80073CA8->unk3C, g_sndSeqState->unk3C, D_80075028.unk1C);
+        func_80016C28(&D_80077368[0], D_80073CA8->unk40, g_sndSeqState->unk40, D_80075028.unk20);
+        func_80016C28(&D_80077368[2], D_80073CA8->unk44, g_sndSeqState->unk44, D_80075028.unk24);
         spuSetTransferControl(D_80077368[0]);
         spuSetDataFifo(D_80077368[1]);
         spuSetTransferAddr(D_80077368[2]);
@@ -793,7 +801,7 @@ void func_800164D8(void) {
  * @param trackMask Bitmask of tracks to check.
  * @param finalMask AND mask applied to the result after accumulation.
  */
-void func_80016A1C(SoundSeqTrack *tracks, u32 *resultPtr, u32 trackMask, u32 finalMask) {
+static void func_80016A1C(SoundSeqTrack *tracks, u32 *resultPtr, u32 trackMask, u32 finalMask) {
     s32 bit = 1;
     s32 one = 1;
 
@@ -848,7 +856,7 @@ void func_80016A7C(void) {
     }
 }
 
-void func_80016C28(u32 *out, u32 maskSecond, u32 maskMain, u32 extra) {
+static void func_80016C28(u32 *out, u32 maskSecond, u32 maskMain, u32 extra) {
     u32 result = 0;
     u32 finalMask;
     u32 pending2 = 0;
