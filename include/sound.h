@@ -23,8 +23,8 @@
 typedef struct {
     /* 0x00 */ s32 unk00;
     /* 0x04 */ s32 updateFlags;   /**< Bitmask of pending SPU register updates. */
-    /* 0x08 */ s32 startAddr;     /**< SPU sample start address. */
-    /* 0x0C */ s32 repeatAddr;    /**< SPU sample repeat/loop address. */
+    /* 0x08 */ u32 startAddr;     /**< SPU sample start address. */
+    /* 0x0C */ u32 repeatAddr;    /**< SPU sample repeat/loop address. */
     /* 0x10 */ u16 sampleRate;    /**< Voice pitch / sample rate. */
     /* 0x12 */ u16 adsrLow;       /**< ADSR envelope low halfword. */
     /* 0x14 */ u16 adsrHigh;      /**< ADSR envelope high halfword. */

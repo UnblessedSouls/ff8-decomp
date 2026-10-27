@@ -1,14 +1,38 @@
 #include "common.h"
+#include "psxsdk/libspu.h"
 #include "sound.h"
 #include "snd_dma.h"
+#include "snd_init.h"
 #include "snd_voice.h"
 
 extern u8 D_80073CB0[];
 
 void sndReleaseVoice(s32 a0);
 
-INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80014FFC);
+void func_80014FFC(s32 voice, SndVoiceParam *param, s32 scale) {
+    u16 *reg;
+    s32 left;
+    s32 right;
 
+    param->updateFlags = 0;
+    reg = (u16 *)(0x1F801C00 + (voice << 4));
+    if (scale == 0) {
+        left = param->volLeft;
+        right = param->volRight;
+    } else {
+        left = param->volLeft * scale;
+        left >>= 7;
+        right = param->volRight * scale;
+        right >>= 7;
+    }
+    *reg++ = left & 0x7FFF;
+    *reg++ = right & 0x7FFF;
+    *reg++ = param->sampleRate;
+    *reg++ = param->startAddr >> 3;
+    *reg++ = param->adsrLow;
+    *reg = param->adsrHigh;
+    reg[2] = param->repeatAddr >> 3;
+}
 
 /**
  * @brief Applies pending SPU register updates for a voice.
@@ -20,8 +44,9 @@ INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80014FFC);
  *
  * @param a0 SPU voice index (0-23).
  * @param a1 Pointer to the voice parameter structure.
+ * @param a2 The owning track's flags (unused).
  */
-void func_800150A8(s32 a0, SndVoiceParam *a1) {
+void func_800150A8(s32 a0, SndVoiceParam *a1, s32 a2) {
     s32 flags = a1->updateFlags;
 
     if (flags == 0) {
@@ -119,7 +144,6 @@ s32 sndAllocVoice(void) {
 }
 
 INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80015FE0);
-
 
 /**
  * @brief Releases a voice from all active sequence tracks.
@@ -238,4 +262,3 @@ void func_80016A1C(u8 *tracks, s32 *resultPtr, s32 trackMask, s32 finalMask) {
 INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016A7C);
 
 INCLUDE_ASM("asm/nonmatchings/snd_voice", func_80016C28);
-
