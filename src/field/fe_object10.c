@@ -696,24 +696,24 @@ s32 func_800BE44C(s32 val) {
  * @return Pointer to the first free slot past the compacted slice.
  */
 s32 *func_800BE4B0(u8 *header, u16 *table) {
+    s32 i;
     s32 count;
     s32 dstIdx;
-    s32 k;
 
     D_800852F0 = table;
     count = func_80037AEC(header, table, &D_80085380);
 
     dstIdx = 0;
-    for (k = 0; k < count - 1; k++) {
-        if (!(((u16 *)D_800DE4E4)[k] & 0x8000) && !func_800BE44C(k)) continue;
-        {
-            u16 orig = D_800852F0[k];
-            D_800852F0[k] = (u16)dstIdx;
+    for (i = 0; i < count - 1; i++) {
+        if ((D_800DE4E4[i] & 0x8000) || (func_800BE44C(i) != 0)) {
+            u16 orig = D_800852F0[i];
+            D_800852F0[i] = dstIdx;
+            
             do {
-                D_80085380[dstIdx] = ((s32 *)D_800DE4E8)[orig];
+                D_80085380[dstIdx] = D_800DE4E8[orig];
                 orig++;
                 dstIdx++;
-            } while (orig < D_800852F0[k + 1]);
+            } while (orig < D_800852F0[i + 1]);
         }
     }
 
