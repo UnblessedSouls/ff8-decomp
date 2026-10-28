@@ -872,7 +872,7 @@ top:
  *
  * Loads the text string for entry 0x10, draws it offset from the given
  * position, configures the display panel (icon 0x57), and renders the
- * border via func_801EF9AC.
+ * border via DrawMenuWindow.
  *
  * @param renderCtx Render context handle.
  * @param cursorY Current OT cursor position.
@@ -896,7 +896,7 @@ s32 func_801E3EC0(s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->y = y;
     cfg->h = 0x16;
 
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -933,7 +933,7 @@ u32 func_801E3F8C(TutoState *state, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = w;
     cfg->h = h;
 
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -995,7 +995,7 @@ u32 func_801E4080(void *state, s32 renderCtx, s32 cursorY, s32 x, s32 y) {
     cfg->w = 0x86;
     cfg->h = 0x80;
 
-    return func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 /**
@@ -1131,7 +1131,7 @@ s32 func_801E43D4(TutoState *state, s32 renderCtx, s32 cursorY) {
         cfg->y = 57;
         cfg->w = 202;
         cfg->h = 143 - (9 - state->availCount) * 15;
-        cursorY = func_801EF9AC(renderCtx, cursorY, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+        cursorY = DrawMenuWindow(renderCtx, cursorY, ONE, g_menuTint[MENU_TINT_NORMAL]);
     }
     return cursorY;
 }

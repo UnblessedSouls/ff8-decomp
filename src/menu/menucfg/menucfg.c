@@ -159,7 +159,7 @@ INCLUDE_ASM("asm/ovl/menucfg/nonmatchings/menucfg", func_801E59F8);
  * If @p text is set, draws it with func_801F0FEC at (x+10, y+7), which
  * advances @p value. Then configures g_menuDisplayCfg
  * with the given position (fixed size 0xF4 x 0x16, iconType=0x55,
- * iconSubType=0) and calls func_801EF9AC to draw the panel.
+ * iconSubType=0) and calls DrawMenuWindow to draw the panel.
  *
  * @param text Text to draw in the panel, or NULL for none.
  * @param data Passed on to the rendering functions.
@@ -185,7 +185,7 @@ static void func_801E61A0(u8 *text, s32 data, s32 value, s32 x, s32 y)
     s->y = y;
     s->h = 0x16;
 
-    func_801EF9AC(data, value, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    DrawMenuWindow(data, value, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menucfg/nonmatchings/menucfg", func_801E625C);
@@ -198,12 +198,12 @@ INCLUDE_ASM("asm/ovl/menucfg/nonmatchings/menucfg", func_801E6538);
  * @brief Configure display panel and invoke rendering callback.
  *
  * Sets up g_menuDisplayCfg with the given position, fixed size (0x11C x 0x25),
- * clears icon fields, and calls func_801EF9AC with g_menuTint[MENU_TINT_NORMAL]
+ * clears icon fields, and calls DrawMenuWindow with g_menuTint[MENU_TINT_NORMAL]
  * and a caller-supplied 0x1000 parameter.
  *
  * @param a0 Unused.
- * @param a1 First parameter passed through to func_801EF9AC.
- * @param a2 Second parameter passed through to func_801EF9AC.
+ * @param a1 First parameter passed through to DrawMenuWindow.
+ * @param a2 Second parameter passed through to DrawMenuWindow.
  * @param a3 X position for the display panel.
  * @param arg4 Y position for the display panel.
  */
@@ -216,7 +216,7 @@ static s32 func_801E67A8(s32 a0, s32 a1, s32 a2, s32 a3, s32 arg4) {
     *(s16 *)(cfg + 4) = 0x11C;
     *(s16 *)(cfg + 6) = 0x25;
     *(s16 *)(cfg + 2) = arg4;
-    return func_801EF9AC(a1, a2, 0x1000, g_menuTint[MENU_TINT_NORMAL]);
+    return DrawMenuWindow(a1, a2, ONE, g_menuTint[MENU_TINT_NORMAL]);
 }
 
 INCLUDE_ASM("asm/ovl/menucfg/nonmatchings/menucfg", func_801E6804);
