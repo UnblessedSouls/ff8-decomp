@@ -23,8 +23,8 @@
 typedef struct {
     /* 0x00 */ s32 unk00;
     /* 0x04 */ s32 updateFlags;   /**< Bitmask of pending SPU register updates. */
-    /* 0x08 */ s32 startAddr;     /**< SPU sample start address. */
-    /* 0x0C */ s32 repeatAddr;    /**< SPU sample repeat/loop address. */
+    /* 0x08 */ u32 startAddr;     /**< SPU sample start address. */
+    /* 0x0C */ u32 repeatAddr;    /**< SPU sample repeat/loop address. */
     /* 0x10 */ u16 sampleRate;    /**< Voice pitch / sample rate. */
     /* 0x12 */ u16 adsrLow;       /**< ADSR envelope low halfword. */
     /* 0x14 */ u16 adsrHigh;      /**< ADSR envelope high halfword. */
@@ -264,7 +264,7 @@ extern s32 D_80073DEC;
 extern s32 D_80077280;
 extern s32 D_80077284;
 extern s32 D_8007507C;
-extern s32 D_80077368[];
+extern u32 D_80077368[];
 extern s32 D_80072F60[];
 extern s32 D_80072F68;
 extern s32 D_80074EB0;
@@ -272,6 +272,27 @@ extern s32 D_80074F18;
 
 /** @brief 12-entry SFX play queue, replayed by @c func_800BF718 after a sound reset. */
 extern VoicePoolEntry D_80074F20[12];
+
+typedef struct {
+    /* 0x00 */ s32 unk00;
+    /* 0x04 */ s32 unk04;
+    /* 0x08 */ s32 unk08;
+    /* 0x0C */ s32 unk0C;
+} UnkStruct80074F10;
+
+extern UnkStruct80074F10 D_80074F10;
+
+typedef struct {
+    /* 0x00 */ s32 unk00;
+    /* 0x04 */ s16 unk04;
+    /* 0x06 */ s16 unk06;
+} UnkStruct80073CB0;
+
+extern UnkStruct80073CB0 D_80073CB0[];
+extern SoundMusicConfig *D_800772F8[];
+extern u32 D_800772A4;
+extern s16 D_80051854[];
+extern s16 D_80051954;
 
 /**
  * @brief Sound command parameter block.

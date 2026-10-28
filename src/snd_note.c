@@ -25,13 +25,6 @@ INCLUDE_ASM("asm/nonmatchings/snd_note", func_8001A674);
 
 INCLUDE_ASM("asm/nonmatchings/snd_note", func_8001AA28);
 
-typedef struct {
-    s32 unk00;
-    s32 unk04;
-    s32 unk08;
-} UnkStruct80074F10;
-
-extern UnkStruct80074F10 D_80074F10;
 
 void func_8001ACCC(SoundMusicConfig *track, SoundSeqTrack *tracks) {
     s32 savedUnk04;
